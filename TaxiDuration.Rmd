@@ -21,7 +21,7 @@ library(survival)
 
 ## Read in data:
 ```{r}
-Taxi <- read_csv("~/Desktop/Taxi.csv")
+Taxi <- read_csv("Taxi.csv")
 ```
 
 ### A first look at the data:
