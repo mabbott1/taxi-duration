@@ -5,6 +5,9 @@ date: "March 1, 2018"
 output: html_document
 ---
 
+Hi i'm Katja and I contributed!
+
+
 Some packages...
 ```{r}
 library(readr)
