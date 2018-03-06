@@ -134,7 +134,7 @@ ggplot(data = states) + geom_polygon(aes(x = long, y = lat, fill = region, group
 ```{r}
 KM_taxi <- survfit(Surv(trip_duration) ~ 1, data = cleanTaxi)
 plot(KM_taxi, col = 'purple', xlim = c(0, 20000))
-#trivial comment
+
 ```
 
 
