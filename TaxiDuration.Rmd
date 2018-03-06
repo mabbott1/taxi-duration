@@ -1,6 +1,6 @@
 ---
-title: "Untitled"
-author: "Madeline Abbott"
+title: "Survival Project"
+author: "Madeline Abbott, Katja McKiernan, Hayley Stutzman"
 date: "March 1, 2018"
 output: html_document
 ---
@@ -137,6 +137,36 @@ plot(KM_taxi, col = 'purple', xlim = c(0, 20000))
 
 ```
 
+
+## Creating a Rush Hour variable 
+
+
+```{r}
+# Sample data set for adding rush hour
+tripIDTest = c(1,2,3,4,5,6,7,8,9,10)
+TimeTest = c(16,16, 8,9.5,6,3,1,12, 8.75, 10)
+TestTaxi = data.frame(tripIDTest,TimeTest)
+
+# Function for adding a rush hour variable-this will work once we figure out a good way to extract the time of day from the dataset
+CreateRush <- function(data1,timeCat){
+  rush = c( 1:nrow(data1))
+  for(i in 1:nrow(data1)){
+    if(timeCat[i] <= 9 & timeCat[i] >= 6.5 ){
+      rush[i] = 1
+    }
+    else if(timeCat[i] >= 15 & timeCat[i] <= 18){
+      rush[i] = 1
+    }
+    else{
+      rush[i] =0
+    }
+  }
+  return(newdata1 = (cbind(data1, rush)))
+}
+newRushTestTaxi =(CreateRush(TestTaxi,TimeTest))
+newRushTestTaxi
+
+```
 
 
 
