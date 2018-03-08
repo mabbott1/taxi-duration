@@ -32,6 +32,7 @@ library(mapdata)
 library(dplyr)
 library(survival)
 library(geosphere)
+library(lubridate)
 ```
 
 ## Read in data:
@@ -179,30 +180,48 @@ survdiff(Surv(trip_duration) ~ as.factor(passenger_count), data = cleanTaxi)
 tripIDTest = c(1,2,3,4,5,6,7,8,9,10)
 TimeTest = c(16,16, 8,9.5,6,3,1,12, 8.75, 10)
 TestTaxi = data.frame(tripIDTest,TimeTest)
-
+TestTaxi
 # Function for adding a rush hour variable-this will work once we figure out a good way to extract the time of day from the dataset
 CreateRush <- function(data1,timeCat){
   rush = c( 1:nrow(data1))
   for(i in 1:nrow(data1)){
-    if(timeCat[i] <= 9 & timeCat[i] >= 6.5 ){
+    if(hour(timeCat[i]) <= 8 && hour(timeCat[i]) >= 6 ){
       rush[i] = 1
     }
-    else if(timeCat[i] >= 15 & timeCat[i] <= 18){
+    else if(hour(timeCat[i]) >= 15 && hour(timeCat[i]) <= 17){
       rush[i] = 1
     }
     else{
-      rush[i] =0
+      rush[i] = 0
     }
   }
   return(newdata1 = (cbind(data1, rush)))
 }
-newRushTestTaxi =(CreateRush(TestTaxi,TimeTest))
-newRushTestTaxi
+#newRushTestTaxi =(CreateRush(TestTaxi,TimeTest))
+#newRushTestTaxi
 
+#miniTaxi = head(cleanTaxi, 10)
+#miniTaxi
+#CreateRush(miniTaxi, miniTaxi$pickup_datetime)
 ```
 
 
+```{r}
+# Extracting time only from pickup info
+cleanTaxi$pickup_datetime = ymd_hms(cleanTaxi$pickup_datetime)
+#Adding rush hour variable to cleanTaxi
+cleanTaxi = CreateRush(cleanTaxi, cleanTaxi$pickup_datetime)
+#typeof( hour(cleanTaxi$pickup_datetime[3]))
+#View(cleanTaxi)
+```
 
+
+```{r}
+KMRush = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
+
+plot(KMRush, col = c("black", "red"), xlim= c(0,5000))
+
+```
 
 
 
