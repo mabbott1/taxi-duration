@@ -141,6 +141,18 @@ ggplot(data = new_york_areas) + geom_polygon(aes(x = long, y = lat, fill = regio
 KM_taxi <- survfit(Surv(trip_duration) ~ 1, data = cleanTaxi)
 plot(KM_taxi, col = 'purple', xlim = c(0, 23500), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration")
 ```
+## NEW: try fitting survival curve with weibull distribution
+
+```{r}
+Weib_taxi <- survreg(Surv(trip_duration) ~ 1, dist = "weibull", data = cleanTaxi)
+
+curve(1 - pweibull(x, shape = 1/0.7045081, scale = exp(6.83227)), from = 0, to = 23500)
+
+haz_taxi <- function(x) {dweibull(x, shape = 1/0.7045081, scale = exp(6.83227)) / (1-pweibull(x, shape = 1/0.7045081, scale = exp(6.83227)))}
+
+plot(haz_taxi, from = 0, to = 23500)
+```
+
 
 
 ### Find mean trip duration
@@ -163,6 +175,10 @@ AUCKM(KM_taxi, cleanTaxi$trip_duration)
 KM_taxi <- survfit(Surv(trip_duration) ~ as.factor(passenger_count), data = cleanTaxi)
 plot(KM_taxi, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim = c(0, 23500), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Passenger Count")
 legend("topright", inset = 0.05, title = "Number of passengers", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
+
+# zoom in
+plot(KM_taxi, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim = c(0, 3000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Passenger Count")
+legend("topright", inset = 0.05, title = "Number of passengers", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
 ```
 
 ### Log rank test
@@ -170,6 +186,71 @@ legend("topright", inset = 0.05, title = "Number of passengers", legend = c("1",
 survdiff(Surv(trip_duration) ~ as.factor(passenger_count), data = cleanTaxi)
 1 - pchisq((314.117 + 707.589 + 110.091 + 152.807 + 5.734 + 0.522), df = 5)
 ```
+
+### AFT model
+```{r}
+m <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), dist = "weibull", data = cleanTaxi)
+summary(m)
+
+surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181))}
+integrate(surv, 0, Inf)
+
+
+# one passenger mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181))}
+integrate(surv, 0, Inf)
+# two passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181 + 0.0628))}
+integrate(surv, 0, Inf)
+# three passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181 + 0.0476))}
+integrate(surv, 0, Inf)
+# four passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181 + 0.0751))}
+integrate(surv, 0, Inf)
+# five passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181 + 0.0203))}
+integrate(surv, 0, Inf)
+# six passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181 + 0.0116))}
+integrate(surv, 0, Inf)
+```
+
+## Trip duration by month
+```{r}
+cleanTaxi$month <- unlist(lapply(cleanTaxi$pickup_datetime, lubridate::month))
+
+library(survival)
+KM_month <- survfit(Surv(trip_duration) ~ as.factor(month), data = cleanTaxi)
+plot(KM_month, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim = c(0, 5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Month")
+legend("topright", inset = 0.05, title = "Month", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
+```
+
+### AFT model of duration by month
+```{r}
+m <- survreg(Surv(trip_duration) ~ as.factor(month), dist = "weibull", data = cleanTaxi)
+summary(m)
+
+# jan
+surv <- function(x) {1-pweibull(x, shape = 1/0.702, scale = exp(6.77320))}
+integrate(surv, 0, Inf)
+# feb
+surv <- function(x) {1-pweibull(x, shape = 1/0.702, scale = exp(6.77320 + -0.00355))}
+integrate(surv, 0, Inf)
+# mar
+surv <- function(x) {1-pweibull(x, shape = 1/0.702, scale = exp(6.77320 + 0.03346))}
+integrate(surv, 0, Inf)
+# apr
+surv <- function(x) {1-pweibull(x, shape = 1/0.702, scale = exp(6.77320 + 0.07207))}
+integrate(surv, 0, Inf)
+# may
+surv <- function(x) {1-pweibull(x, shape = 1/0.702, scale = exp(6.77320 + 0.12043))}
+integrate(surv, 0, Inf)
+# jun
+surv <- function(x) {1-pweibull(x, shape = 1/0.702, scale = exp(6.77320 + 0.12584))}
+integrate(surv, 0, Inf)
+```
+
 
 
 
@@ -224,12 +305,6 @@ legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", 
 
 survdiff(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
 ```
-
-
-
-
-
-
 
 
 
