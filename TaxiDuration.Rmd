@@ -306,5 +306,10 @@ legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", 
 survdiff(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
 ```
 
+```{r}
+WeatherData <-read_csv("WeatherTaxi.csv")
+
+
+```
 
 
