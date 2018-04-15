@@ -34,6 +34,7 @@ library(survival)
 library(geosphere)
 library(lubridate)
 library(osrm)
+library(tidyr)
 ```
 
 ## Read in data:
@@ -143,8 +144,9 @@ ggplot(data = new_york_areas) + geom_polygon(aes(x = long, y = lat, fill = regio
 KM_taxi <- survfit(Surv(trip_duration) ~ 1, data = cleanTaxi)
 plot(KM_taxi, col = 'purple', xlim = c(0, 23500), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration")
 ```
-## NEW: try fitting survival curve with weibull distribution
 
+
+## NEW: try fitting survival curve with weibull distribution
 ```{r}
 Weib_taxi <- survreg(Surv(trip_duration) ~ 1, dist = "weibull", data = cleanTaxi)
 
@@ -303,27 +305,48 @@ survdiff(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
 KMRushDist = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush+cleanTaxi$distance_traveled, conf.type = "plain")
 ```
 
+
+
+
+
+
+# NEW STUFF BELOW...
+
+
+
 ```{r}
-WeatherData <-read_csv("WeatherTaxi.csv")
-
-
+WeatherData <-read.csv("WeatherTaxi.csv")
+cleanTaxi$day <- format(as.Date(cleanTaxi$pickup_datetime), "%Y-%m-%d")
 ```
 
 
-# Traffic Accidents
+# TAXI ROUTES
 
-To look at accidents, we will first find shortest road routes between start and end.
-Then look to see if there was an accident in that route anytime between the start and end time of the trip.
-If true, then add an indicator variable for accident.
+* looking at bike lanes, busy streets...
+
+First find shortest road routes between start and end.
 
 ```{r}
-Accidents <- read.csv("accidents_2016.csv")
-#View(Accidents)
+# shorests routes for each taxi ride
+Routes1 <- read.csv("fastest_routes_train_part_1.csv")
+Routes2 <- read.csv("fastest_routes_train_part_2.csv")
 
-Foo <- read.csv("fastest_routes_train_part_1.csv")
-dim(Foo)
+# join routes with taxi data
+RoutesAll <- rbind(Routes1, Routes2)
+TaxiRoutes <- merge(cleanTaxi, RoutesAll, by = "id")
 
 
+#Street info:
+StreetInfo <- read.csv("nyc_centerline.csv")
+View(StreetInfo)
+```
+
+
+```{r}
+miniTaxi <- head(TaxiRoutes, 20)
+miniTaxiNew <- miniTaxi %>%
+  separate(split.col = street_for_each_step, into = paste("street", fill = T, sep = '|'))
+  
 ```
 
 
