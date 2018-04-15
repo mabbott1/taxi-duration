@@ -33,7 +33,7 @@ library(dplyr)
 library(survival)
 library(geosphere)
 library(lubridate)
-library(osrm)
+#library(osrm)
 library(tidyr)
 ```
 
