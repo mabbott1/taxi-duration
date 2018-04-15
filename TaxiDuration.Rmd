@@ -295,12 +295,19 @@ cleanTaxi = CreateRush(cleanTaxi, cleanTaxi$pickup_datetime)
 ```{r}
 KMRush = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush, conf.type = "plain")
 
-plot(KMRush, col = c("black", "red"), xlim= c(0,10000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour")
+plot(KMRush, col = c("black", "red"), xlim= c(0,5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour")
 legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", "1"), fill = c('black', 'red'))
 
 survdiff(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
+
+KMRushDist = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush+cleanTaxi$distance_traveled, conf.type = "plain")
 ```
 
+```{r}
+WeatherData <-read_csv("WeatherTaxi.csv")
+
+
+```
 
 
 # Traffic Accidents
