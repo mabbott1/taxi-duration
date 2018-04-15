@@ -323,6 +323,49 @@ cleanTaxi$date <- format(as.Date(cleanTaxi$pickup_datetime, format = "%Y-%m-%d  
 TaxiWeather <- merge(cleanTaxi, WeatherData, by = "date")
 ```
 
+
+### Trip duration by rush hour, splitting rush hour into more categories
+
+
+```{r}
+CreateRushMorn <- function(data1,timeCat){
+  rushMorn = c( 1:nrow(data1))
+  for(i in 1:nrow(data1)){
+    if(hour(timeCat[i]) <= 8 && hour(timeCat[i]) >= 6 ){
+      rushMorn[i] = 1
+    }
+    else{
+      rushMorn[i] = 0
+    }
+  }
+  return(newdata1 = (cbind(data1, rushMorn)))
+}
+cleanTaxi2 = CreateRushMorn(cleanTaxi, cleanTaxi$pickup_datetime)
+
+
+CreateRushEve <- function(data1,timeCat){
+  rushEve = c( 1:nrow(data1))
+  for(i in 1:nrow(data1)){
+    if(hour(timeCat[i]) >= 15 && hour(timeCat[i]) <= 17){
+      rushEve[i] = 1
+    }
+    else{
+      rushEve[i] = 0
+    }
+  }
+  return(newdata1 = (cbind(data1, rushEve)))
+}
+
+cleanTaxiFin = CreateRushEve(cleanTaxi2, cleanTaxi$pickup_datetime)
+
+
+```
+
+
+
+
+
+
 ### Trip duration by precipitation
 ```{r}
 # Trip duration by precipitation
