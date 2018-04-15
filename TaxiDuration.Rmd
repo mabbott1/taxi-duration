@@ -310,17 +310,30 @@ KMRushDist = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush+cleanTaxi$dist
 
 
 
-# NEW STUFF BELOW...
+# NEW STUFF BELOW...(add to GitHub)
 
 
+# Weather
 
+Join Taxi data with Weather data
 ```{r}
-WeatherData <-read.csv("WeatherTaxi.csv")
-cleanTaxi$day <- format(as.Date(cleanTaxi$pickup_datetime), "%Y-%m-%d")
+WeatherData <- read.csv("WeatherTaxi.csv")
+WeatherData$date <- format(as.Date(WeatherData$date, format = "%d-%m-%Y"), "%Y-%m-%d")
+cleanTaxi$date <- format(as.Date(cleanTaxi$pickup_datetime, format = "%Y-%m-%d  %H:%M"), "%Y-%m-%d")
+TaxiWeather <- merge(cleanTaxi, WeatherData, by = "date")
+```
+
+### Trip duration by precipitation
+```{r}
+# Trip duration by precipitation
+
+
+# Trip duration by precipitation (controlling for distance)
 ```
 
 
-# TAXI ROUTES
+
+# Taxi Routes
 
 * looking at bike lanes, busy streets...
 
