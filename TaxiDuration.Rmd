@@ -33,11 +33,13 @@ library(dplyr)
 library(survival)
 library(geosphere)
 library(lubridate)
+library(osrm)
 ```
 
 ## Read in data:
 ```{r}
-Taxi <- read_csv("Taxi.csv")
+Taxi <- read.csv("Taxi.csv")
+dim(Taxi)
 ```
 
 ### A first look at the data:
@@ -253,8 +255,6 @@ integrate(surv, 0, Inf)
 
 
 
-
-
 ## Creating a Rush Hour variable 
 ```{r}
 # Sample data set for adding rush hour
@@ -278,12 +278,7 @@ CreateRush <- function(data1,timeCat){
   }
   return(newdata1 = (cbind(data1, rush)))
 }
-#newRushTestTaxi =(CreateRush(TestTaxi,TimeTest))
-#newRushTestTaxi
 
-#miniTaxi = head(cleanTaxi, 10)
-#miniTaxi
-#CreateRush(miniTaxi, miniTaxi$pickup_datetime)
 ```
 
 
@@ -305,6 +300,34 @@ legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", 
 
 survdiff(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
 ```
+
+
+
+# Traffic Accidents
+
+To look at accidents, we will first find shortest road routes between start and end.
+Then look to see if there was an accident in that route anytime between the start and end time of the trip.
+If true, then add an indicator variable for accident.
+
+```{r}
+Accidents <- read.csv("accidents_2016.csv")
+#View(Accidents)
+
+Foo <- read.csv("fastest_routes_train_part_1.csv")
+dim(Foo)
+
+
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
