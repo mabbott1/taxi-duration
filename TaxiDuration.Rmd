@@ -35,6 +35,7 @@ library(geosphere)
 library(lubridate)
 library(osrm)
 library(tidyr)
+#library(survminer)
 ```
 
 ## Read in data:
@@ -321,24 +322,87 @@ WeatherData <- read.csv("WeatherTaxi.csv")
 WeatherData$date <- format(as.Date(WeatherData$date, format = "%d-%m-%Y"), "%Y-%m-%d")
 cleanTaxi$date <- format(as.Date(cleanTaxi$pickup_datetime, format = "%Y-%m-%d  %H:%M"), "%Y-%m-%d")
 TaxiWeather <- merge(cleanTaxi, WeatherData, by = "date")
+
+#precipitation
+TaxiWeather$precipitation <- as.numeric(as.character(TaxiWeather$precipitation))
+TaxiWeather$precipitation[is.na(TaxiWeather$precipitation)] <- 0.01
+#snow.fall
+TaxiWeather$snow.fall <- as.numeric(as.character(TaxiWeather$snow.fall))
+TaxiWeather$snow.fall[is.na(TaxiWeather$snow.fall)] <- 0.01
+#snow.depth
+TaxiWeather$snow.depth <- as.numeric(as.character(TaxiWeather$snow.depth))
+TaxiWeather$snow.depth[is.na(TaxiWeather$snow.depth)] <- 0.01
 ```
 
-### Trip duration by precipitation
+### Trip duration by total precipitation
 ```{r}
-# Trip duration by precipitation
+# Exponential
+mod_precip_exp <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "exponential")
+summary(mod_precip_exp)
+# Cox Snell Residuals
+CoxSnell = function(cs,status,xlim=NULL,ylim=NULL)
+{
+kmcs=survfit(Surv(jitter(cs,amount=(max(cs)-min(cs))/1000),status)~1)$surv
+plot(log(-log(kmcs))~sort(log(cs)),xlab="log(Cox-Snell)",ylab="log(-log(S(Cox-Snell)))",xlim=xlim,ylim=ylim)
+abline(0,1,col='red')
+}
+# Plot only a sample of 1000 CS residuals
+cs = -log( 1 - pexp(TaxiWeather$trip_duration, 1/exp(6.7331 + -0.0394*TaxiWeather$precipitation)))
+# smaller sample of cs residuals
+cs_sample <- sample(cs, 1000)
+status <- rep(1, length(cs_sample))
+CoxSnell(cs_sample, status)
+
+# Weibull
+mod_precip_weib <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "weibull")
+summary(mod_precip_weib)
+# Plot only a sample of 1000 CS residuals
+cs = -log( 1 - pweibull(TaxiWeather$trip_duration, shape = 1/0.704, scale = exp(6.8356 + -0.0392*TaxiWeather$precipitation)))
+# smaller sample of cs residuals
+cs_sample <- sample(cs, 1000)
+status <- rep(1, length(cs_sample))
+CoxSnell(cs_sample, status)
+
+# Log normal
+mod_precip_lnorm <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "lognormal")
+summary(mod_precip_lnorm)
+# Plot only a sample of 1000 CS residuals
+cs = -log( 1 - plnorm(TaxiWeather$trip_duration, mean = 6.4724 + -0.0402*TaxiWeather$precipitation, sd = 0.741))
+# smaller sample of cs residuals
+cs_sample <- sample(cs, 1000)
+status <- rep(1, length(cs_sample))
+CoxSnell(cs_sample, status)
+
+# Log normal look the best!
 
 
 # Trip duration by precipitation (controlling for distance)
+summary(survreg(Surv(trip_duration) ~ precipitation*distance_traveled, data = TaxiWeather), dist = "lognormal")
 ```
+
+## Q: How does the type of weather affect trip duration?
+
+Make new categorical variable: fair weather, rain, snow
+```{r}
+TaxiWeather <- TaxiWeather %>%
+    mutate(weather = ifelse(snow.fall > 0, "snow", ifelse(precipitation > 0, "rain", "fair"))) 
+```
+
+Then make models (with and without controlling for distance)
+```{r}
+summary(survreg(Surv(trip_duration) ~ weather, data = TaxiWeather), dist = "lognormal")
+summary(survreg(Surv(trip_duration) ~ weather*distance_traveled, data = TaxiWeather), dist = "lognormal")
+```
+
+
 
 
 
 # Taxi Routes
 
-* looking at bike lanes, busy streets...
+* looking at bike lanes, busy streets, snow priority...
 
-First find shortest road routes between start and end.
-
+Use shortest road routes between start and end.
 ```{r}
 # shorests routes for each taxi ride
 Routes1 <- read.csv("fastest_routes_train_part_1.csv")
@@ -348,20 +412,34 @@ Routes2 <- read.csv("fastest_routes_train_part_2.csv")
 RoutesAll <- rbind(Routes1, Routes2)
 TaxiRoutes <- merge(cleanTaxi, RoutesAll, by = "id")
 
-
 #Street info:
+# (Note: first need to make street names consistent between StreetInfo dataset and TaxiRoutes dataset)
 StreetInfo <- read.csv("nyc_centerline.csv")
 View(StreetInfo)
+
+# [1] AVE  ST   BLVD RD   LN   CT        PL   PKWY DR   BRG  EXPY PLZ  LOOP XING CIR  TER  APPR CRES SQ   ALY  WAY 
+#[23] WALK PARK EN   HL   TRL  TUNL HTS  FWY  PT   GLN  TPKE EXT  PATH GDNS ROAD HWY  LK   OVAL ROW  RAMP SLIP VLG 
+#[45] CLOS N    CRSE RMP  GRN  OPAS VIA  RDG  BL   EXIT ESPL MNR  RDWY DY   BDG  CP 
+
+#StreetInfo$street <- sub("AVE", "AVENUE", StreetInfo$street)
+#StreetInfo$street <- sub("ST", "STREET", StreetInfo$street)
+
+
+#StreetInfo2 <- StreetInfo %>%
+  gsub(street, "AVE", "AVENUE")
+
+#gsub(".", " ", data, fixed=TRUE)
 ```
 
-
+Separating list of taxi route streets into columns
 ```{r}
-miniTaxi <- head(TaxiRoutes, 20)
-miniTaxiNew <- miniTaxi %>%
-  separate(split.col = street_for_each_step, into = paste("street", fill = T, sep = '|'))
-  
-```
+#TaxiRoutes$street_for_each_step = sapply(TaxiRoutes$street_for_each_step, FUN = toupper)
 
+#TaxiRoutes <- separate(TaxiRoutes, 'street_for_each_step', paste("street_for_each_step", #1:max(TaxiRoutes$number_of_steps), sep="_"), sep="\\|", extra="drop")
+
+#write.csv(TaxiRoutes, file = "TaxiRoutes.csv")
+TaxiRoutes <- read.csv("TaxiRoutes.csv")
+```
 
 
 
