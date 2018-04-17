@@ -147,7 +147,7 @@ plot(KM_taxi, col = 'purple', xlim = c(0, 23500), xlab = "Trip Duration (seconds
 ```
 
 
-## NEW: try fitting survival curve with weibull distribution
+## Survival curve with weibull distribution
 ```{r}
 Weib_taxi <- survreg(Surv(trip_duration) ~ 1, dist = "weibull", data = cleanTaxi)
 
@@ -313,12 +313,6 @@ KMRushDist = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush+cleanTaxi$dist
 
 
 
-
-
-
-# NEW STUFF BELOW...(add to GitHub)
-
-
 # Weather
 
 Join Taxi data with Weather data
@@ -339,13 +333,10 @@ TaxiWeather$snow.depth <- as.numeric(as.character(TaxiWeather$snow.depth))
 TaxiWeather$snow.depth[is.na(TaxiWeather$snow.depth)] <- 0.01
 ```
 
-<<<<<<< HEAD
-### Trip duration by total precipitation
-=======
-
 
 ### Trip duration by precipitation
->>>>>>> 05d4e28f413e0a6c163900646fcbd5d29f029716
+
+Try modeling with exponential, weibull, and log normal distributions.  Use Cox Snell residuals to compare fits.
 ```{r}
 # Exponential
 mod_precip_exp <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "exponential")
@@ -391,7 +382,7 @@ CoxSnell(cs_sample, status)
 summary(survreg(Surv(trip_duration) ~ precipitation*distance_traveled, data = TaxiWeather), dist = "lognormal")
 ```
 
-## Q: How does the type of weather affect trip duration?
+### Q: How does the type of weather affect trip duration?
 
 Make new categorical variable: fair weather, rain, snow
 ```{r}
@@ -404,8 +395,6 @@ Then make models (with and without controlling for distance)
 summary(survreg(Surv(trip_duration) ~ weather, data = TaxiWeather), dist = "lognormal")
 summary(survreg(Surv(trip_duration) ~ weather*distance_traveled, data = TaxiWeather), dist = "lognormal")
 ```
-
-
 
 
 
@@ -422,7 +411,20 @@ Routes2 <- read.csv("fastest_routes_train_part_2.csv")
 # join routes with taxi data
 RoutesAll <- rbind(Routes1, Routes2)
 TaxiRoutes <- merge(cleanTaxi, RoutesAll, by = "id")
+```
 
+Separating list of taxi route streets into columns
+```{r}
+#TaxiRoutes$street_for_each_step = sapply(TaxiRoutes$street_for_each_step, FUN = toupper)
+
+#TaxiRoutes <- separate(TaxiRoutes, 'street_for_each_step', paste("street_for_each_step", #1:max(TaxiRoutes$number_of_steps), sep="_"), sep="\\|", extra="drop")
+
+#write.csv(TaxiRoutes, file = "TaxiRoutes.csv")
+TaxiRoutes <- read.csv("TaxiRoutes.csv")
+```
+
+Add information about streets (working here...)
+```{r}
 #Street info:
 # (Note: first need to make street names consistent between StreetInfo dataset and TaxiRoutes dataset)
 StreetInfo <- read.csv("nyc_centerline.csv")
@@ -442,15 +444,6 @@ View(StreetInfo)
 #gsub(".", " ", data, fixed=TRUE)
 ```
 
-Separating list of taxi route streets into columns
-```{r}
-#TaxiRoutes$street_for_each_step = sapply(TaxiRoutes$street_for_each_step, FUN = toupper)
-
-#TaxiRoutes <- separate(TaxiRoutes, 'street_for_each_step', paste("street_for_each_step", #1:max(TaxiRoutes$number_of_steps), sep="_"), sep="\\|", extra="drop")
-
-#write.csv(TaxiRoutes, file = "TaxiRoutes.csv")
-TaxiRoutes <- read.csv("TaxiRoutes.csv")
-```
 
 
 
