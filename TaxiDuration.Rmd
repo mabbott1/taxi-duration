@@ -33,7 +33,7 @@ library(dplyr)
 library(survival)
 library(geosphere)
 library(lubridate)
-library(osrm)
+#library(osrm)
 library(tidyr)
 #library(survminer)
 ```
@@ -273,7 +273,7 @@ CreateRush <- function(data1,timeCat){
       rush[i] = 1
     }
     else if(hour(timeCat[i]) >= 15 && hour(timeCat[i]) <= 17){
-      rush[i] = 1
+      rush[i] = 2
     }
     else{
       rush[i] = 0
@@ -290,18 +290,23 @@ CreateRush <- function(data1,timeCat){
 cleanTaxi$pickup_datetime = ymd_hms(cleanTaxi$pickup_datetime)
 #Adding rush hour variable to cleanTaxi
 cleanTaxi = CreateRush(cleanTaxi, cleanTaxi$pickup_datetime)
-#typeof( hour(cleanTaxi$pickup_datetime[3]))
-#View(cleanTaxi)
+
 ```
 
 
 ```{r}
 KMRush = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush, conf.type = "plain")
 
-plot(KMRush, col = c("black", "red"), xlim= c(0,5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour")
-legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", "1"), fill = c('black', 'red'))
+plot(KMRush, col = c("black", "red", "green"), xlim= c(0,5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour")
+legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", "1", "2"), fill = c('black', 'red', 'green'))
 
 survdiff(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
+
+coxRushDist = coxph(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush*cleanTaxi$distance_traveled)
+summary(coxRushDist)
+
+cox.zph(coxRushDist)
+
 
 KMRushDist = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush+cleanTaxi$distance_traveled, conf.type = "plain")
 ```
@@ -334,7 +339,13 @@ TaxiWeather$snow.depth <- as.numeric(as.character(TaxiWeather$snow.depth))
 TaxiWeather$snow.depth[is.na(TaxiWeather$snow.depth)] <- 0.01
 ```
 
+<<<<<<< HEAD
 ### Trip duration by total precipitation
+=======
+
+
+### Trip duration by precipitation
+>>>>>>> 05d4e28f413e0a6c163900646fcbd5d29f029716
 ```{r}
 # Exponential
 mod_precip_exp <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "exponential")
