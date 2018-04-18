@@ -505,6 +505,22 @@ StreetInfo$street <- sub("CP", "", StreetInfo$street)
 ```
 
 
+## Creating Bike Lane Vector
+
+
+```{r}
+
+RoadsData = data.frame(TaxiRoutes$street_for_each_step_1, TaxiRoutes$street_for_each_step_2,TaxiRoutes$street_for_each_step_3,TaxiRoutes$street_for_each_step_4,TaxiRoutes$street_for_each_step_5,TaxiRoutes$street_for_each_step_6,TaxiRoutes$street_for_each_step_7,TaxiRoutes$street_for_each_step_8,TaxiRoutes$street_for_each_step_9,TaxiRoutes$street_for_each_step_10,TaxiRoutes$street_for_each_step_11,TaxiRoutes$street_for_each_step_12,TaxiRoutes$street_for_each_step_13,TaxiRoutes$street_for_each_step_14,TaxiRoutes$street_for_each_step_15,TaxiRoutes$street_for_each_step_16,TaxiRoutes$street_for_each_step_17,TaxiRoutes$street_for_each_step_18,TaxiRoutes$street_for_each_step_19,TaxiRoutes$street_for_each_step_20,TaxiRoutes$street_for_each_step_21,TaxiRoutes$street_for_each_step_22,TaxiRoutes$street_for_each_step_23,TaxiRoutes$street_for_each_step_24,TaxiRoutes$street_for_each_step_25,TaxiRoutes$street_for_each_step_26,TaxiRoutes$street_for_each_step_27,TaxiRoutes$street_for_each_step_28,TaxiRoutes$street_for_each_step_29,TaxiRoutes$street_for_each_step_30,TaxiRoutes$street_for_each_step_31,TaxiRoutes$street_for_each_step_32,TaxiRoutes$street_for_each_step_33,TaxiRoutes$street_for_each_step_34,TaxiRoutes$street_for_each_step_35,TaxiRoutes$street_for_each_step_36,TaxiRoutes$street_for_each_step_37,TaxiRoutes$street_for_each_step_38,TaxiRoutes$street_for_each_step_39,TaxiRoutes$street_for_each_step_40,TaxiRoutes$street_for_each_step_41,TaxiRoutes$street_for_each_step_42,TaxiRoutes$street_for_each_step_43,TaxiRoutes$street_for_each_step_44,TaxiRoutes$street_for_each_step_45,TaxiRoutes$street_for_each_step_46,)
+
+for (i in 1:nrow(TaxiRoutes)){
+  bikecount = 0
+  BikeLaneTripList = vector(,nrow(TaxiRoutes))
+  for (i in )
+}
+
+
+
+```
 
 
 
