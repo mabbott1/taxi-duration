@@ -421,6 +421,7 @@ Separating list of taxi route streets into columns
 
 #write.csv(TaxiRoutes, file = "TaxiRoutes.csv")
 TaxiRoutes <- read.csv("TaxiRoutes.csv")
+miniTaxiRoutes <- TaxiRoutes[sample(nrow(TaxiRoutes), 100), ]
 ```
 
 Add information about streets (working here...)
@@ -434,12 +435,71 @@ View(StreetInfo)
 #[23] WALK PARK EN   HL   TRL  TUNL HTS  FWY  PT   GLN  TPKE EXT  PATH GDNS ROAD HWY  LK   OVAL ROW  RAMP SLIP VLG 
 #[45] CLOS N    CRSE RMP  GRN  OPAS VIA  RDG  BL   EXIT ESPL MNR  RDWY DY   BDG  CP 
 
-#StreetInfo$street <- sub("AVE", "AVENUE", StreetInfo$street)
-#StreetInfo$street <- sub("ST", "STREET", StreetInfo$street)
+StreetInfo$street <- sub("AVE", "AVENUE", StreetInfo$street)
+StreetInfo$street <- sub("ST", "STREET", StreetInfo$street)
+StreetInfo$street <- sub("BLVD", "BOULEVARD", StreetInfo$street)
+StreetInfo$street <- sub("RD", "ROAD", StreetInfo$street)
+StreetInfo$street <- sub("LN", "LANE", StreetInfo$street)
+StreetInfo$street <- sub("CT", "COURT", StreetInfo$street)
+StreetInfo$street <- sub("PL", "PLACE", StreetInfo$street)
+StreetInfo$street <- sub("PKWY", "PARKWAY", StreetInfo$street)
+StreetInfo$street <- sub("DR", "DRIVE", StreetInfo$street)
+StreetInfo$street <- sub("BRG", "BRIDGE", StreetInfo$street)
+StreetInfo$street <- sub("EXPY", "EXPRESSWAY", StreetInfo$street)
+StreetInfo$street <- sub("PLZ", "PLAZA", StreetInfo$street)
+StreetInfo$street <- sub("LOOP", "LOOP", StreetInfo$street)
+StreetInfo$street <- sub("XING", "CROSSING", StreetInfo$street)
+StreetInfo$street <- sub("CIR", "CIRCLE", StreetInfo$street)
+StreetInfo$street <- sub("TER", "TERRACE", StreetInfo$street)
+StreetInfo$street <- sub("XING", "CROSSING", StreetInfo$street)
+StreetInfo$street <- sub("APPR", "", StreetInfo$street)
+StreetInfo$street <- sub("CRES", "", StreetInfo$street)
+StreetInfo$street <- sub("SQ", "", StreetInfo$street)
+StreetInfo$street <- sub("ALY", "", StreetInfo$street)
+StreetInfo$street <- sub("WAY", "", StreetInfo$street)
+StreetInfo$street <- sub("WALK", "", StreetInfo$street)
+StreetInfo$street <- sub("PARK", "", StreetInfo$street)
+StreetInfo$street <- sub("EN", "", StreetInfo$street)
+StreetInfo$street <- sub("HL", "", StreetInfo$street)
+StreetInfo$street <- sub("TRL", "", StreetInfo$street)
+StreetInfo$street <- sub("TUNL", "", StreetInfo$street)
+StreetInfo$street <- sub("HTS", "", StreetInfo$street)
+StreetInfo$street <- sub("FWY", "", StreetInfo$street)
+StreetInfo$street <- sub("PT", "", StreetInfo$street)
+StreetInfo$street <- sub("GLN", "", StreetInfo$street)
+StreetInfo$street <- sub("TPKE", "", StreetInfo$street)
+StreetInfo$street <- sub("EXT", "", StreetInfo$street)
+StreetInfo$street <- sub("PATH", "", StreetInfo$street)
+StreetInfo$street <- sub("GDNS", "", StreetInfo$street)
+StreetInfo$street <- sub("ROAD", "", StreetInfo$street)
+StreetInfo$street <- sub("HWY", "", StreetInfo$street)
+StreetInfo$street <- sub("LK", "", StreetInfo$street)
+StreetInfo$street <- sub("OVAL", "", StreetInfo$street)
+StreetInfo$street <- sub("ROW", "", StreetInfo$street)
+StreetInfo$street <- sub("RAMP", "", StreetInfo$street)
+StreetInfo$street <- sub("SLIP", "", StreetInfo$street)
+StreetInfo$street <- sub("VLG", "", StreetInfo$street)
+StreetInfo$street <- sub("CLOS", "", StreetInfo$street)
+StreetInfo$street <- sub("N", "", StreetInfo$street)
+StreetInfo$street <- sub("CRSE", "", StreetInfo$street)
+StreetInfo$street <- sub("RMP", "", StreetInfo$street)
+StreetInfo$street <- sub("GRN", "", StreetInfo$street)
+StreetInfo$street <- sub("OPAS", "", StreetInfo$street)
+StreetInfo$street <- sub("VIA", "", StreetInfo$street)
+StreetInfo$street <- sub("RDG", "", StreetInfo$street)
+StreetInfo$street <- sub("BL", "", StreetInfo$street)
+StreetInfo$street <- sub("EXIT", "", StreetInfo$street)
+StreetInfo$street <- sub("ESPL", "", StreetInfo$street)
+StreetInfo$street <- sub("MNR", "", StreetInfo$street)
+StreetInfo$street <- sub("RDWY", "", StreetInfo$street)
+StreetInfo$street <- sub("DY", "", StreetInfo$street)
+StreetInfo$street <- sub("BDG", "", StreetInfo$street)
+StreetInfo$street <- sub("CP", "", StreetInfo$street)
 
 
-#StreetInfo2 <- StreetInfo %>%
-  gsub(street, "AVE", "AVENUE")
+  
+
+
 
 #gsub(".", " ", data, fixed=TRUE)
 ```
