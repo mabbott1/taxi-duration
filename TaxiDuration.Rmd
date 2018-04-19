@@ -33,11 +33,15 @@ library(dplyr)
 library(survival)
 library(geosphere)
 library(lubridate)
+library(RgoogleMaps)
+library(rgdal)
+library(rgeos)
+library(tmap)
 ```
 
 ## Read in data:
 ```{r}
-Taxi <- read_csv("Taxi.csv")
+Taxi <- read_csv("train.csv")
 ```
 
 ### A first look at the data:
@@ -81,26 +85,26 @@ ggplot(data = states) + geom_polygon(aes(x = long, y = lat, fill = region, group
 ```{r}
 # So far this limits longitude to between -90 and -60 degrees, and latitude to between 37 and 43 degrees,
 #cleanTaxi <- Taxi %>%
-#  filter(-70 > pickup_longitude) %>% filter(pickup_longitude > -90) %>%
-#  filter(37 < pickup_latitude) %>% filter(pickup_latitude < 43) %>%
-#  filter(-70 > dropoff_longitude) %>% filter(dropoff_longitude > -90) %>%
-#  filter(37 < dropoff_latitude) %>% filter(dropoff_latitude < 43)
+  #filter(-70 > pickup_longitude) %>% filter(pickup_longitude > -90) %>%
+  #filter(37 < pickup_latitude) %>% filter(pickup_latitude < 43) %>%
+  #filter(-70 > dropoff_longitude) %>% filter(dropoff_longitude > -90) %>%
+  #filter(37 < dropoff_latitude) %>% filter(dropoff_latitude < 43)
 
 # calculate average speed (approximate) and restrict to average speed of over 2 mph and under 70 mph.
-#getDistance <- function(location_data) {distGeo(c(location_data[1], location_data[2]), c(location_data[3], #location_data[4]))}
-#cleanTaxi$distance_traveled <- apply(cleanTaxi[c("pickup_longitude", "pickup_latitude", "dropoff_longitude", #"dropoff_latitude")], 1, getDistance)  # in meters, distance "as the crow flies"
+#getDistance <- function(location_data) {distGeo(c(location_data[1], location_data[2]), c(location_data[3], location_data[4]))}
+#cleanTaxi$distance_traveled <- apply(cleanTaxi[c("pickup_longitude", "pickup_latitude", "dropoff_longitude", "dropoff_latitude")], 1, getDistance)                                         # in meters, distance "as the crow flies"
 # convert to miles
 #cleanTaxi$distance_traveled <- cleanTaxi$distance_traveled*0.000621371
 # get average speed
 #cleanTaxi$average_speed <- cleanTaxi$distance_traveled / (cleanTaxi$trip_duration/60/60)
 # filter out really slow and really fast taxis
 #cleanTaxi2 <- cleanTaxi %>%
-#  filter(average_speed > 2) %>% filter(average_speed < 70)
+  #filter(average_speed > 2) %>% filter(average_speed < 70)
 
 # Restricts duration to under 80000 seconds (about 22 hours) and over 10 seconds
 #cleanTaxi3 <- cleanTaxi2 %>%
-#  filter(trip_duration > 10) %>%
-#  filter(trip_duration < 80000)
+  #filter(trip_duration > 10) %>%
+  #filter(trip_duration < 80000)
 
 
 # save the cleaner version of the data
@@ -310,8 +314,8 @@ KMRushDist = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush+cleanTaxi$dist
 
 ```{r}
 WeatherData <-read_csv("WeatherTaxi.csv")
-
-
 ```
+
+### Attempt at Making variable of busy route or area
 
 
