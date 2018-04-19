@@ -538,6 +538,25 @@ RoadsNameData <- sapply(RoadsNameData, function(x) sub("TH", "", x) )
 # dataframe for length of road traveled in each step
 RoadLengthData <- TaxiRoutes[,67]
 RoadLengthData <- separate(RoadLengthData, 'distance_per_step', paste("distance_per_step", 1:max(TaxiRoutes$number_of_steps), sep="_"), sep="\\|", extra="drop")
+```
+
+
+# NEW STUFF--workig here
+## Trying again with smaller dataset
+```{r}
+set.seed(1985)
+small_ind <- sample(1:nrow(TaxiRoutes), 100)
+smallTaxiRoutes <- TaxiRoutes[small_ind,]
+
+RoadsNameData <- smallTaxiRoutes[,21:66]
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("(?<=3).*// ", "", x, perl=TRUE))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("ST", "", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("ND", "", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("RD", "", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("REET", "STREET", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("SOU", "SOUTH", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("NOR", "NORTH", x))
+
 
 
 
@@ -546,8 +565,9 @@ getBikeLaneTotal <- function() {
     
   }
 }
+```
 
-
+```{r}
 for (i in 1:nrow(TaxiRoutes)){
   bikecount = 0
   BikeLaneTripList = vector(,nrow(TaxiRoutes))
