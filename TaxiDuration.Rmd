@@ -36,6 +36,7 @@ library(lubridate)
 #library(osrm)
 library(tidyr)
 #library(survminer)
+library(data.table)
 ```
 
 ## Read in data:
@@ -405,30 +406,33 @@ summary(survreg(Surv(trip_duration) ~ weather*distance_traveled, data = TaxiWeat
 Use shortest road routes between start and end.
 ```{r}
 # shorests routes for each taxi ride
-Routes1 <- read.csv("fastest_routes_train_part_1.csv")
-Routes2 <- read.csv("fastest_routes_train_part_2.csv")
+#Routes1 <- read.csv("fastest_routes_train_part_1.csv")
+#Routes2 <- read.csv("fastest_routes_train_part_2.csv")
 
 # join routes with taxi data
-RoutesAll <- rbind(Routes1, Routes2)
-TaxiRoutes <- merge(cleanTaxi, RoutesAll, by = "id")
+#RoutesAll <- rbind(Routes1, Routes2)
+#TaxiRoutes <- merge(cleanTaxi, RoutesAll, by = "id")
 ```
 
 Separating list of taxi route streets into columns
 ```{r}
 #TaxiRoutes$street_for_each_step = sapply(TaxiRoutes$street_for_each_step, FUN = toupper)
 
-#TaxiRoutes <- separate(TaxiRoutes, 'street_for_each_step', paste("street_for_each_step", #1:max(TaxiRoutes$number_of_steps), sep="_"), sep="\\|", extra="drop")
+#TaxiRoutes <- separate(TaxiRoutes, 'street_for_each_step', paste("street_for_each_step", 1:max(TaxiRoutes$number_of_steps), sep="_"), sep="\\|", extra="drop")
 
 #write.csv(TaxiRoutes, file = "TaxiRoutes.csv")
-TaxiRoutes <- read.csv("TaxiRoutes.csv")
-miniTaxiRoutes <- TaxiRoutes[sample(nrow(TaxiRoutes), 100), ]
+
+TaxiRoutes <- fread('TaxiRoutes.csv', header = T, sep = ',') 
+#TaxiRoutes <- read.csv("TaxiRoutes.csv")
+miniTaxiRoutes <- TaxiRoutes[sample(nrow(TaxiRoutes), 1000), ]
+#write.csv(miniTaxiRoutes, "miniTaxiRoutes.csv")
 ```
 
 Add information about streets (working here...)
 ```{r}
 #Street info:
 # (Note: first need to make street names consistent between StreetInfo dataset and TaxiRoutes dataset)
-StreetInfo <- read.csv("nyc_centerline.csv")
+StreetInfo <- fread("nyc_centerline.csv")
 View(StreetInfo)
 
 StreetInfo$street <- sub("\\<AVE\\>", "AVENUE", StreetInfo$street)
@@ -492,20 +496,57 @@ StreetInfo$street <- sub("\\<DY\\>", "DY", StreetInfo$street)
 StreetInfo$street <- sub("\\<BDG\\>", "BDG", StreetInfo$street)
 StreetInfo$street <- sub("\\<CP\\>", "CAMP", StreetInfo$street)
 
+```
 
-streetInfoRoads <- data.frame(streets = sort(unique(StreetInfo$street))) 
-TaxiRoutesStreetsONLY <- TaxiRoutes[,21:66]
-taxiRoads <- data.frame(streets = sort(unique(as.vector(as.matrix(TaxiRoutesStreetsONLY)))))
+```{r}
+#streetInfoRoads <- data.frame(streets = sort(unique(StreetInfo$street))) 
+#TaxiRoutesStreetsONLY <- TaxiRoutes[,21:66]
+#taxiRoads <- data.frame(streets = sort(unique(as.vector(as.matrix(TaxiRoutesStreetsONLY)))))
 
-setdiff(streetInfoRoads,taxiRoads)
+#taxiRoads$streets <- sub("TH", "", taxiRoads$streets)
+#taxiRoads$streets <- sub("ST", "", taxiRoads$streets)
+#taxiRoads$streets <- sub("ND", "", taxiRoads$streets)
+#taxiRoads$streets <- sub("RD", "", taxiRoads$streets)
+#taxiRoads$streets <- sub(" REET", " STREET", taxiRoads$streets)
 
+#missingRoads <- setdiff(streetInfoRoads$streets,taxiRoads$streets)
+#setdiff(missingRoads, streetInfoRoads$streets)
+# all road names in taxi routes should have street info
 ```
 
 
 ### Calculating bike lane %
 
 ```{r}
-RoadsData = TaxiRoutes[,21:66]
+# dataframe for name of road traveled in each step
+RoadsNameData <- TaxiRoutes[,21:66]
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("TH", "", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("ST", "", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("ND", "", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("RD", "", x))
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("REET", "STREET", x))
+
+#taxiRoads$streets <- sub("ST", "", taxiRoads$streets)
+#taxiRoads$streets <- sub("ND", "", taxiRoads$streets)
+#taxiRoads$streets <- sub("RD", "", taxiRoads$streets)
+#taxiRoads$streets <- sub(" REET", " STREET", taxiRoads$streets)
+
+
+mini <- head(RoadsNameData, 100)
+RoadsNameData <- sapply(RoadsNameData, function(x) sub("TH", "", x) )
+
+# dataframe for length of road traveled in each step
+RoadLengthData <- TaxiRoutes[,67]
+RoadLengthData <- separate(RoadLengthData, 'distance_per_step', paste("distance_per_step", 1:max(TaxiRoutes$number_of_steps), sep="_"), sep="\\|", extra="drop")
+
+
+
+getBikeLaneTotal <- function() {
+  for (i in 1:number_of_steps) {
+    
+  }
+}
+
 
 for (i in 1:nrow(TaxiRoutes)){
   bikecount = 0
