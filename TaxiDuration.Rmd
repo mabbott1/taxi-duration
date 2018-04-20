@@ -37,11 +37,17 @@ library(RgoogleMaps)
 library(rgdal)
 library(rgeos)
 library(tmap)
+#library(osrm)
+library(tidyr)
+#library(survminer)
 ```
 
 ## Read in data:
 ```{r}
 Taxi <- read_csv("train.csv")
+
+Taxi <- read.csv("Taxi.csv")
+dim(Taxi)
 ```
 
 ### A first look at the data:
@@ -101,14 +107,17 @@ ggplot(data = states) + geom_polygon(aes(x = long, y = lat, fill = region, group
 #cleanTaxi2 <- cleanTaxi %>%
   #filter(average_speed > 2) %>% filter(average_speed < 70)
 
-# Restricts duration to under 80000 seconds (about 22 hours) and over 10 seconds
-#cleanTaxi3 <- cleanTaxi2 %>%
-  #filter(trip_duration > 10) %>%
-  #filter(trip_duration < 80000)
+cleanTaxi <- read_csv("cleanTaxi.csv")
+dim(cleanTaxi)
+
+# Restricts duration to under 7200 seconds (about 2 hours) and over 10 seconds
+cleanTaxi3 <- cleanTaxi %>%
+  filter(trip_duration > 10) %>%
+  filter(trip_duration < 7200)
 
 
 # save the cleaner version of the data
-#write.csv(cleanTaxi3, file = "cleanTaxi.csv")
+write.csv(cleanTaxi3, file = "cleanTaxi.csv")
 ```
 
 
@@ -145,8 +154,9 @@ ggplot(data = new_york_areas) + geom_polygon(aes(x = long, y = lat, fill = regio
 KM_taxi <- survfit(Surv(trip_duration) ~ 1, data = cleanTaxi)
 plot(KM_taxi, col = 'purple', xlim = c(0, 23500), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration")
 ```
-## NEW: try fitting survival curve with weibull distribution
 
+
+## Survival curve with weibull distribution
 ```{r}
 Weib_taxi <- survreg(Surv(trip_duration) ~ 1, dist = "weibull", data = cleanTaxi)
 
@@ -255,8 +265,17 @@ surv <- function(x) {1-pweibull(x, shape = 1/0.702, scale = exp(6.77320 + 0.1258
 integrate(surv, 0, Inf)
 ```
 
+### Month Multivariate Models
+```{r}
+# Weibull: controlling for distance 
+#month_weib = survreg(Surv(trip_duration) ~ as.factor(month) + total_distance, dist = "weibull", data = TaxiRoutes)
+#summary(month_weib)
 
-
+#Km models
+KM_month2 <- survfit(Surv(trip_duration) ~ as.factor(month) + total_distance, data = TaxiRoutes)
+#plot(KM_month, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim = c(0, 5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Month")
+#legend("topright", inset = 0.05, title = "Month", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
+```
 
 
 ## Creating a Rush Hour variable 
@@ -274,7 +293,7 @@ CreateRush <- function(data1,timeCat){
       rush[i] = 1
     }
     else if(hour(timeCat[i]) >= 15 && hour(timeCat[i]) <= 17){
-      rush[i] = 1
+      rush[i] = 2
     }
     else{
       rush[i] = 0
@@ -282,12 +301,7 @@ CreateRush <- function(data1,timeCat){
   }
   return(newdata1 = (cbind(data1, rush)))
 }
-#newRushTestTaxi =(CreateRush(TestTaxi,TimeTest))
-#newRushTestTaxi
 
-#miniTaxi = head(cleanTaxi, 10)
-#miniTaxi
-#CreateRush(miniTaxi, miniTaxi$pickup_datetime)
 ```
 
 
@@ -296,26 +310,313 @@ CreateRush <- function(data1,timeCat){
 cleanTaxi$pickup_datetime = ymd_hms(cleanTaxi$pickup_datetime)
 #Adding rush hour variable to cleanTaxi
 cleanTaxi = CreateRush(cleanTaxi, cleanTaxi$pickup_datetime)
-#typeof( hour(cleanTaxi$pickup_datetime[3]))
-#View(cleanTaxi)
+
 ```
 
 
 ```{r}
 KMRush = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush, conf.type = "plain")
 
-plot(KMRush, col = c("black", "red"), xlim= c(0,5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour")
-legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", "1"), fill = c('black', 'red'))
+plot(KMRush, col = c("black", "red", "green"), xlim= c(0,5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour")
+legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", "1", "2"), fill = c('black', 'red', 'green'))
 
 survdiff(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
+
+coxRushDist = coxph(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush*cleanTaxi$distance_traveled)
+summary(coxRushDist)
+
+cox.zph(coxRushDist)
+
 
 KMRushDist = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush+cleanTaxi$distance_traveled, conf.type = "plain")
 ```
 
+
+
+# Weather
+
+Join Taxi data with Weather data
 ```{r}
-WeatherData <-read_csv("WeatherTaxi.csv")
+WeatherData <- read.csv("WeatherTaxi.csv")
+WeatherData$date <- format(as.Date(WeatherData$date, format = "%d-%m-%Y"), "%Y-%m-%d")
+cleanTaxi$date <- format(as.Date(cleanTaxi$pickup_datetime, format = "%Y-%m-%d  %H:%M"), "%Y-%m-%d")
+TaxiWeather <- merge(cleanTaxi, WeatherData, by = "date")
+
+#precipitation
+TaxiWeather$precipitation <- as.numeric(as.character(TaxiWeather$precipitation))
+TaxiWeather$precipitation[is.na(TaxiWeather$precipitation)] <- 0.01
+#snow.fall
+TaxiWeather$snow.fall <- as.numeric(as.character(TaxiWeather$snow.fall))
+TaxiWeather$snow.fall[is.na(TaxiWeather$snow.fall)] <- 0.01
+#snow.depth
+TaxiWeather$snow.depth <- as.numeric(as.character(TaxiWeather$snow.depth))
+TaxiWeather$snow.depth[is.na(TaxiWeather$snow.depth)] <- 0.01
 ```
 
+
+### Trip duration by precipitation
+
+Try modeling with exponential, weibull, and log normal distributions.  Use Cox Snell residuals to compare fits.
+```{r}
+# Exponential
+mod_precip_exp <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "exponential")
+summary(mod_precip_exp)
+# Cox Snell Residuals
+CoxSnell = function(cs,status,xlim=NULL,ylim=NULL)
+{
+kmcs=survfit(Surv(jitter(cs,amount=(max(cs)-min(cs))/1000),status)~1)$surv
+plot(log(-log(kmcs))~sort(log(cs)),xlab="log(Cox-Snell)",ylab="log(-log(S(Cox-Snell)))",xlim=xlim,ylim=ylim)
+abline(0,1,col='red')
+}
+# Plot only a sample of 1000 CS residuals
+cs = -log( 1 - pexp(TaxiWeather$trip_duration, 1/exp(6.7331 + -0.0394*TaxiWeather$precipitation)))
+# smaller sample of cs residuals
+cs_sample <- sample(cs, 1000)
+status <- rep(1, length(cs_sample))
+CoxSnell(cs_sample, status)
+
+# Weibull
+mod_precip_weib <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "weibull")
+summary(mod_precip_weib)
+# Plot only a sample of 1000 CS residuals
+cs = -log( 1 - pweibull(TaxiWeather$trip_duration, shape = 1/0.704, scale = exp(6.8356 + -0.0392*TaxiWeather$precipitation)))
+# smaller sample of cs residuals
+cs_sample <- sample(cs, 1000)
+status <- rep(1, length(cs_sample))
+CoxSnell(cs_sample, status)
+
+# Log normal
+mod_precip_lnorm <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "lognormal")
+summary(mod_precip_lnorm)
+# Plot only a sample of 1000 CS residuals
+cs = -log( 1 - plnorm(TaxiWeather$trip_duration, mean = 6.4724 + -0.0402*TaxiWeather$precipitation, sd = 0.741))
+# smaller sample of cs residuals
+cs_sample <- sample(cs, 1000)
+status <- rep(1, length(cs_sample))
+CoxSnell(cs_sample, status)
+
+# Log normal look the best!
+
+
+# Trip duration by precipitation (controlling for distance)
+summary(survreg(Surv(trip_duration) ~ precipitation*distance_traveled, data = TaxiWeather), dist = "lognormal")
+```
+
+```{r}
+#cph_precipitation = coxph(Surv(trip_duration) ~ precipitation, data=TaxiWeather)
+#summary(cph_precipitation)
+
+#cox.zph(cph_precipitation)
+
+#Residuals for model had significant p-value so we would not want to use a cox ph model for - stick with the lognormal.
+```
+
+
+### Q: How does the type of weather affect trip duration?
+
+Make new categorical variable: fair weather, rain, snow
+```{r}
+TaxiWeather <- TaxiWeather %>%
+    mutate(weather = ifelse(snow.fall > 0, "snow", ifelse(precipitation > 0, "rain", "fair"))) 
+```
+
+Then make models (with and without controlling for distance)
+```{r}
+summary(survreg(Surv(trip_duration) ~ weather, data = TaxiWeather), dist = "lognormal")
+summary(survreg(Surv(trip_duration) ~ weather+distance_traveled+factor(passenger_count), data = TaxiWeather), dist = "lognormal")
+```
+
+
+
+# Taxi Routes
+
+* looking at bike lanes, busy streets, snow priority...
+
+Use shortest road routes between start and end.
+```{r}
+# shorests routes for each taxi ride
+Routes1 <- read.csv("fastest_routes_train_part_1.csv")
+Routes2 <- read.csv("fastest_routes_train_part_2.csv")
+
+# join routes with taxi data
+RoutesAll <- rbind(Routes1, Routes2)
+TaxiRoutes <- merge(cleanTaxi, RoutesAll, by = "id")
+```
+
+Separating list of taxi route streets into columns
+```{r}
+
 ### Attempt at Making variable of busy route or area
+#TaxiRoutes$street_for_each_step = sapply(TaxiRoutes$street_for_each_step, FUN = toupper)
+
+#TaxiRoutes <- separate(TaxiRoutes, 'street_for_each_step', paste("street_for_each_step", #1:max(TaxiRoutes$number_of_steps), sep="_"), sep="\\|", extra="drop")
+
+#write.csv(TaxiRoutes, file = "TaxiRoutes.csv")
+TaxiRoutes <- read.csv("TaxiRoutes.csv")
+miniTaxiRoutes <- TaxiRoutes[sample(nrow(TaxiRoutes), 100), ]
+```
+
+Add information about streets (working here...)
+```{r}
+#Street info:
+# (Note: first need to make street names consistent between StreetInfo dataset and TaxiRoutes dataset)
+StreetInfo <- read.csv("nyc_centerline.csv")
+View(StreetInfo)
+
+StreetInfo$street <- sub("\\<AVE\\>", "AVENUE", StreetInfo$street)
+StreetInfo$street <- sub("\\<ST\\>", "STREET", StreetInfo$street)
+StreetInfo$street <- sub("\\<BLVD\\>", "BOULEVARD", StreetInfo$street)
+StreetInfo$street <- sub("\\<RD\\>", "ROAD", StreetInfo$street)
+StreetInfo$street <- sub("\\<LN\\>", "LANE", StreetInfo$street)
+StreetInfo$street <- sub("\\<CT\\>", "COURT", StreetInfo$street)
+StreetInfo$street <- sub("\\<PL\\>", "PLACE", StreetInfo$street)
+StreetInfo$street <- sub("\\<PKWY\\>", "PARKWAY", StreetInfo$street)
+StreetInfo$street <- sub("\\<DR\\>", "DRIVE", StreetInfo$street)
+StreetInfo$street <- sub("\\<BRG\\>", "BRIDGE", StreetInfo$street)
+StreetInfo$street <- sub("\\<EXPY\\>", "EXPRESSWAY", StreetInfo$street)
+StreetInfo$street <- sub("\\<PLZ\\>", "PLAZA", StreetInfo$street)
+StreetInfo$street <- sub("\\<LOOP\\>", "LOOP", StreetInfo$street)
+StreetInfo$street <- sub("\\<XING\\>", "CROSSING", StreetInfo$street)
+StreetInfo$street <- sub("\\<CIR\\>", "CIRCLE", StreetInfo$street)
+StreetInfo$street <- sub("\\<TER\\>", "TERRACE", StreetInfo$street)
+StreetInfo$street <- sub("\\<XING\\>", "CROSSING", StreetInfo$street)
+StreetInfo$street <- sub("\\<APPR\\>", "APPROACH", StreetInfo$street)
+StreetInfo$street <- sub("\\<CRES\\>", "CRESCENT", StreetInfo$street)
+StreetInfo$street <- sub("\\<SQ\\>", "SQUARE", StreetInfo$street)
+StreetInfo$street <- sub("\\<ALY\\>", "ALLEY", StreetInfo$street)
+StreetInfo$street <- sub("\\<WAY\\>", "CAUSEWAY", StreetInfo$street)
+StreetInfo$street <- sub("\\<WALK\\>", "WALK", StreetInfo$street)
+StreetInfo$street <- sub("\\<PARK\\>", "PARK", StreetInfo$street)
+StreetInfo$street <- sub("\\<EN\\>", "EN", StreetInfo$street)
+StreetInfo$street <- sub("\\<HL\\>", "HILL", StreetInfo$street)
+StreetInfo$street <- sub("\\<TRL\\>", "TRAIL", StreetInfo$street)
+StreetInfo$street <- sub("\\<TUNL\\>", "TUNNEL", StreetInfo$street)
+StreetInfo$street <- sub("\\<HTS\\>", "HEIGHTS", StreetInfo$street)
+StreetInfo$street <- sub("\\<FWY\\>", "FREEWAY", StreetInfo$street)
+StreetInfo$street <- sub("\\<PT\\>", "POINT", StreetInfo$street)
+StreetInfo$street <- sub("\\<GLN\\>", "GLEN", StreetInfo$street)
+StreetInfo$street <- sub("\\<TPKE\\>", "TURNPIKE", StreetInfo$street)
+StreetInfo$street <- sub("\\<EXT\\>", "EXTENSION", StreetInfo$street)
+StreetInfo$street <- sub("\\<PATH\\>", "PATH", StreetInfo$street)
+StreetInfo$street <- sub("\\<GDNS\\>", "GARDENS", StreetInfo$street)
+StreetInfo$street <- sub("\\<ROAD\\>", "ROAD", StreetInfo$street)
+StreetInfo$street <- sub("\\<HWY\\>", "HIGHWAY", StreetInfo$street)
+StreetInfo$street <- sub("\\<LK\\>", "LAKE", StreetInfo$street)
+StreetInfo$street <- sub("\\<OVAL\\>", "OVAL", StreetInfo$street)
+StreetInfo$street <- sub("\\<ROW\\>", "ROW", StreetInfo$street)
+StreetInfo$street <- sub("\\<RAMP\\>", "RAMP", StreetInfo$street)
+StreetInfo$street <- sub("\\<SLIP\\>", "SLIP", StreetInfo$street)
+StreetInfo$street <- sub("\\<VLG\\>", "VILLAGE", StreetInfo$street)
+StreetInfo$street <- sub("\\<CLOS\\>", "CLOSE", StreetInfo$street)
+StreetInfo$street <- sub("\\<N\\>", "NORTH", StreetInfo$street)
+StreetInfo$street <- sub("\\<CRS\\>E", "COURSE", StreetInfo$street)
+StreetInfo$street <- sub("\\<RMP\\>", "RAMP", StreetInfo$street)
+StreetInfo$street <- sub("\\<GRN\\>", "GREEN", StreetInfo$street)
+StreetInfo$street <- sub("\\<OPAS\\>", "OVERPASS", StreetInfo$street)
+StreetInfo$street <- sub("\\<VIA\\>", "VIADUCT", StreetInfo$street)
+StreetInfo$street <- sub("\\<RDG\\>", "RIDGE", StreetInfo$street)
+StreetInfo$street <- sub("\\<BL\\>", "BOULEVARD", StreetInfo$street)
+StreetInfo$street <- sub("\\<EXIT\\>", "EXIT", StreetInfo$street)
+StreetInfo$street <- sub("\\<ESPL\\>", "ESPLANADE", StreetInfo$street)
+StreetInfo$street <- sub("\\<MNR\\>", "MANOR", StreetInfo$street)
+StreetInfo$street <- sub("\\<RDWY\\>", "ROADWAY", StreetInfo$street)
+StreetInfo$street <- sub("\\<DY\\>", "DY", StreetInfo$street)
+StreetInfo$street <- sub("\\<BDG\\>", "BDG", StreetInfo$street)
+StreetInfo$street <- sub("\\<CP\\>", "CAMP", StreetInfo$street)
+
+
+streetInfoRoads <- data.frame(streets = sort(unique(StreetInfo$street))) 
+TaxiRoutesStreetsONLY <- TaxiRoutes[,21:66]
+taxiRoads <- data.frame(streets = sort(unique(as.vector(as.matrix(TaxiRoutesStreetsONLY)))))
+
+setdiff(streetInfoRoads,taxiRoads)
+
+```
+
+
+### Calculating bike lane %
+
+```{r}
+RoadsData = TaxiRoutes[,21:66]
+
+for (i in 1:nrow(TaxiRoutes)){
+  bikecount = 0
+  BikeLaneTripList = vector(,nrow(TaxiRoutes))
+  for (j in RoadsData[,j]){
+    if (RoadsData[i,j] != "NA"){
+      for (k in Stree3tInfo[k,]){
+        if( StreetInfo[k, 3] == RoadsData[i,j]){
+          if(StreetInfo[k,6] != "NA"{
+            bikecount = bikecount+1
+          })
+        }
+      }
+    }
+  }
+  BikeLandTripList[i] = bikecount
+}
+```
+
+
+
+### Trip Duration by number of turns
+```{r}
+#TaxiRoutes$number_of_turns = TaxiRoutes$number_of_steps - 1
+library(stringr)
+#count number of turns - not including roundabounds and on ramps 
+TaxiRoutes$turn_num <- str_count(TaxiRoutes$step_maneuvers, "turn")
+
+```
+
+```{r}
+ln_step_number1 = survreg(Surv(trip_duration) ~ number_of_turns, dist = "lognormal", data=TaxiRoutes)
+summary(ln_step_number1)
+
+ln_step_number2 = survreg(Surv(trip_duration) ~ number_of_turns + distance_traveled, dist = "lognormal", data=TaxiRoutes)
+summary(ln_step_number2)
+
+ln_step_number3 = survreg(Surv(trip_duration) ~ as.factor(passenger_count) + number_of_turns, dist = "lognormal", data=TaxiRoutes)
+summary(ln_step_number3)
+```
+
+
+### Multivariate Models with Passenger Count
+
+```{r}
+# Trying to see how model passenger count with other variables -> Made Cox PH model of duration by passenger count but didn't seem to follow ph assumption. 
+
+#cph_passenger1 = coxph(Surv(trip_duration) ~ as.factor(passenger_count), data = TaxiRoutes)
+#summary(cph_passenger1)
+
+#KM1 = survfit(Surv(trip_duration) ~ as.factor(passenger_count), data=TaxiRoutes)
+#plot(KM1, fun='cloglog', mark.time=FALSE, col=c("black", "red", "blue", "green", "orange", "purple"))
+#cox.zph(cph_passenger1)
+
+
+
+#Trying different parametric models 
+
+# Exponential
+pcount_exp <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), data = TaxiRoutes, dist = "exponential")
+summary(pcount_exp)
+
+# Weibull
+pcount_weib <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), data = TaxiRoutes, dist = "weibull")
+summary(pcount_weib)
+
+#Lognormal
+# Exponential
+pcount_lnorm <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), data = TaxiRoutes, dist = "lognormal")
+summary(pcount_lnorm)
+
+
+```
+
+
+
+
+
+
+
 
 
