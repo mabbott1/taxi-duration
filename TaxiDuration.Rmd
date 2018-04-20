@@ -541,7 +541,7 @@ RoadLengthData <- separate(RoadLengthData, 'distance_per_step', paste("distance_
 ```
 
 
-# NEW STUFF--workig here
+# NEW STUFF--working here
 ## Trying again with smaller dataset
 ```{r}
 set.seed(1985)
