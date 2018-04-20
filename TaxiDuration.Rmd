@@ -600,16 +600,18 @@ getBikeLaneTotal <- function() {
 ```
 
 ```{r}
-for (i in 1:nrow(TaxiRoutes)){
+RoadsNameData = read.csv("RoadsNameData.csv")
+
+for (i in 1:nrow(RoadsNameData)){
   bikecount = 0
-  BikeLaneTripList = vector(,nrow(TaxiRoutes))
-  for (j in RoadsData[,j]){
-    if (RoadsData[i,j] != "NA"){
-      for (k in Stree3tInfo[k,]){
-        if( StreetInfo[k, 3] == RoadsData[i,j]){
-          if(StreetInfo[k,6] != "NA"{
+  BikeLaneTripList = vector(,nrow(RoadsNameData))
+  for (j in (2:ncol(RoadsNameData)){
+    if (RoadsNameData[i,j] != "NA"){
+      for (k in 1:nrow(StreetInfo){
+        if(StreetInfo[k, 3] == RoadsNameData[i,j]){
+          if(StreetInfo[k,6] != "NA"){
             bikecount = bikecount+1
-          })
+          }
         }
       }
     }
