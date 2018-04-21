@@ -599,25 +599,32 @@ getBikeLaneTotal <- function() {
 }
 ```
 
-```{r}
-RoadsNameData = read.csv("RoadsNameData.csv")
 
-for (i in 1:nrow(RoadsNameData)){
+```{r}
+RoadsNameData = read.csv("RoadsNameData3.csv")
+StreetInfo = read.csv("nyc_centerline.csv")
+mini = head(RoadsNameData, 5)
+bikeStreetInfo = subset(StreetInfo, bike_lane > 0)
+bikeStreetInfo = bikeStreetInfo[,c(3:4,6,8:13)]
+bikeStreetInfo = unique(bikeStreetInfo)
+
+
+for (i in 1:nrow(mini)){
   bikecount = 0
-  BikeLaneTripList = vector(,nrow(RoadsNameData))
-  for (j in (2:ncol(RoadsNameData)){
-    if (RoadsNameData[i,j] != "NA"){
-      for (k in 1:nrow(StreetInfo){
-        if(StreetInfo[k, 3] == RoadsNameData[i,j]){
-          if(StreetInfo[k,6] != "NA"){
+  BikeLaneTripList = vector(mode = "integer",length = nrow(mini))
+  for (j in (2:ncol(mini))){
+    #if ((mini[i,j]) = NA){
+      for (k in 1:nrow(bikeStreetInfo)){
+        word = bikeStreetInfo$bike_lane[k]
+        if(identical(word, (mini[i,j]))){
             bikecount = bikecount+1
-          }
         }
       }
-    }
+    #}
   }
-  BikeLandTripList[i] = bikecount
+  BikeLaneTripList[i] = bikecount
 }
+BikeLaneTripList
 ```
 
 
