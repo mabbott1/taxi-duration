@@ -126,10 +126,11 @@ cleanTaxi <- read.csv("cleanTaxi.csv") %>%
 # make another map
 states <- map_data("state")
 new_york_areas <- subset(states, region %in% c("new york", "new jersey", "connecticut", "pennsylvania"))
+new_york_only <- subset(states, region %in% c("new york"))
 # drop off
-ggplot(data = new_york_areas) + geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + coord_fixed(1.3) + guides(fill=FALSE) + geom_point(data = cleanTaxi, aes(x = dropoff_longitude, y = dropoff_latitude), color = "black", size = 2, alpha = 0.3) + xlab("Longitude") + ylab("Latitude") + ggtitle("Drop-off Locations")
+ggplot(data = new_york_only) + geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + coord_fixed(1.3) + guides(fill=FALSE) + geom_point(data = cleanTaxi, aes(x = dropoff_longitude, y = dropoff_latitude), color = "black", size = 2, alpha = 0.3) + xlab("Longitude") + ylab("Latitude") + ggtitle("Drop-off Locations") + coord_map(xlim = c(-75, -72.5),ylim = c(40, 42))
 # pick up
-ggplot(data = new_york_areas) + geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + coord_fixed(1.3) + guides(fill=FALSE) + geom_point(data = cleanTaxi, aes(x = pickup_longitude, y = pickup_latitude), color = "black", size = 2, alpha = 0.3) + xlab("Longitude") + ylab("Latitude") + ggtitle("Pick-up Locations")
+ggplot(data = new_york_only) + geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + coord_fixed(1.3) + guides(fill=FALSE) + geom_point(data = cleanTaxi, aes(x = pickup_longitude, y = pickup_latitude), color = "black", size = 2, alpha = 0.3) + xlab("Longitude") + ylab("Latitude") + ggtitle("Pick-up Locations") + coord_map(xlim = c(-75, -72.5),ylim = c(40, 42))
 
 ```
 
@@ -183,8 +184,11 @@ plot(KM_taxi, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim 
 legend("topright", inset = 0.05, title = "Number of passengers", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
 
 # zoom in
-plot(KM_taxi, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim = c(0, 3000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Passenger Count")
+plot(KM_taxi, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Passenger Count")
 legend("topright", inset = 0.05, title = "Number of passengers", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
+
+library(stargazer)
+stargazer(KM_taxi, align = T)
 ```
 
 ### Log rank test
@@ -195,7 +199,7 @@ survdiff(Surv(trip_duration) ~ as.factor(passenger_count), data = cleanTaxi)
 
 ### AFT model
 ```{r}
-m <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), dist = "weibull", data = cleanTaxi)
+m <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), dist = "weibull", data = TaxiRoutes)
 summary(m)
 
 surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181))}
@@ -222,19 +226,27 @@ surv <- function(x) {1-pweibull(x, shape = 1/0.704, scale = exp(6.8181 + 0.0116)
 integrate(surv, 0, Inf)
 ```
 
+Control for distance and number of steps
+```{r}
+m2 <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + total_distance + number_of_steps, dist = "weibull", data = TaxiRoutes)
+summary(m2)
+
+
+```
+
 ## Trip duration by month
 ```{r}
-cleanTaxi$month <- unlist(lapply(cleanTaxi$pickup_datetime, lubridate::month))
+TaxiRoutes$month <- unlist(lapply(TaxiRoutes$pickup_datetime, lubridate::month))
 
 library(survival)
-KM_month <- survfit(Surv(trip_duration) ~ as.factor(month), data = cleanTaxi)
+KM_month <- survfit(Surv(trip_duration) ~ as.factor(month), data = TaxiRoutes)
 plot(KM_month, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim = c(0, 5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Month")
 legend("topright", inset = 0.05, title = "Month", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
 ```
 
 ### AFT model of duration by month
 ```{r}
-m <- survreg(Surv(trip_duration) ~ as.factor(month), dist = "weibull", data = cleanTaxi)
+m <- survreg(Surv(trip_duration) ~ as.factor(month), dist = "weibull", data = TaxiRoutes)
 summary(m)
 
 # jan
@@ -255,6 +267,10 @@ integrate(surv, 0, Inf)
 # jun
 surv <- function(x) {1-pweibull(x, shape = 1/0.702, scale = exp(6.77320 + 0.12584))}
 integrate(surv, 0, Inf)
+
+# controlling for distance
+m2 <- survreg(Surv(trip_duration) ~ as.factor(month) + total_distance, dist = "weibull", data = TaxiRoutes)
+summary(m2)
 ```
 
 
@@ -549,13 +565,25 @@ small_ind <- sample(1:nrow(TaxiRoutes), 100)
 smallTaxiRoutes <- TaxiRoutes[small_ind,]
 
 RoadsNameData <- smallTaxiRoutes[,21:66]
-RoadsNameData <- sapply(RoadsNameData, function(x) sub("(?<=3).*// ", "", x, perl=TRUE))
-RoadsNameData <- sapply(RoadsNameData, function(x) sub("ST", "", x))
-RoadsNameData <- sapply(RoadsNameData, function(x) sub("ND", "", x))
-RoadsNameData <- sapply(RoadsNameData, function(x) sub("RD", "", x))
-RoadsNameData <- sapply(RoadsNameData, function(x) sub("REET", "STREET", x))
-RoadsNameData <- sapply(RoadsNameData, function(x) sub("SOU", "SOUTH", x))
-RoadsNameData <- sapply(RoadsNameData, function(x) sub("NOR", "NORTH", x))
+
+for (i in 1:nrow(RoadsNameData)){
+  if (startsWith(RoadsNameData[i,], "3")) {
+    sapply(RoadsNameData[i,], function(x) sub("[^0-9].* ", " ", x), RoadsNameData)
+  } 
+}
+
+
+
+  if(startsWith(RoadsNameData[i,], "3"), sapply(RoadsNameData[i,], function(x) sub("[^0-9].* ", " ", x)), RoadsNameData)
+
+startsWith("100", "1")
+
+#RoadsNameData <- sapply(RoadsNameData, function(x) sub("ST", "", x))
+#RoadsNameData <- sapply(RoadsNameData, function(x) sub("ND", "", x))
+#RoadsNameData <- sapply(RoadsNameData, function(x) sub("RD", "", x))
+#RoadsNameData <- sapply(RoadsNameData, function(x) sub("REET", "STREET", x))
+#RoadsNameData <- sapply(RoadsNameData, function(x) sub("SOU", "SOUTH", x))
+#RoadsNameData <- sapply(RoadsNameData, function(x) sub("NOR", "NORTH", x))
 
 
 
