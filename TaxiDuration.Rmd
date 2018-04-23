@@ -251,8 +251,31 @@ Control for distance and number of steps
 ```{r}
 m2 <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + total_distance + number_of_steps, dist = "weibull", data = TaxiRoutes)
 summary(m2)
+```
 
+Control for distance
+```{r}
+m3 <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + total_distance, dist = "weibull", data = TaxiRoutes)
+summary(m2)
 
+# one passenger mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.481, scale = exp(6.27 + 9.65e-05 * mean(TaxiRoutes$total_distance)))}
+integrate(surv, 0, Inf)
+# two passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.481, scale = exp(6.27 + 1.45e-02 + 9.65e-05 * mean(TaxiRoutes$total_distance)))}
+integrate(surv, 0, Inf)
+# three passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.481, scale = exp(6.27 + 2.69e-02 + 9.65e-05 * mean(TaxiRoutes$total_distance)))}
+integrate(surv, 0, Inf)
+# four passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.481, scale = exp(6.27 + 3.39e-02 + 9.65e-05 * mean(TaxiRoutes$total_distance)))}
+integrate(surv, 0, Inf)
+# five passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.481, scale = exp(6.27 + 9.80e-04 + 9.65e-05 * mean(TaxiRoutes$total_distance)))}
+integrate(surv, 0, Inf)
+# six passengers mean trip time
+surv <- function(x) {1-pweibull(x, shape = 1/0.481, scale = exp(6.27 + 0.0116 + 9.65e-05 * mean(TaxiRoutes$total_distance)))}
+integrate(surv, 0, Inf)
 ```
 
 ## Trip duration by month
@@ -432,6 +455,11 @@ cleanTaxi$pickup_datetime = ymd_hms(cleanTaxi$pickup_datetime)
 #Adding rush hour variable to cleanTaxi
 cleanTaxi = CreateRush(cleanTaxi, cleanTaxi$pickup_datetime)
 
+
+# Extracting time only from pickup info
+TaxiWeather$pickup_datetime = ymd_hms(TaxiWeather$pickup_datetime)
+#Adding rush hour variable to cleanTaxi
+TaxiWeather = CreateRush(TaxiWeather, TaxiWeather$pickup_datetime)
 ```
 
 
@@ -443,13 +471,16 @@ legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", 
 
 survdiff(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush)
 
-coxRushDist = coxph(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush*cleanTaxi$distance_traveled)
+coxRushDist = coxph(Surv(TaxiWeather$trip_duration)~TaxiWeather$rush*TaxiWeather$total_distance)
 summary(coxRushDist)
 
 cox.zph(coxRushDist)
 
 
-KMRushDist = survfit(Surv(cleanTaxi$trip_duration)~cleanTaxi$rush+cleanTaxi$distance_traveled, conf.type = "plain")
+KMRushDist = survfit(Surv(TaxiWeather$trip_duration)~TaxiWeather$rush+TaxiWeather$total_distance, conf.type = "plain")
+
+plot(KMRushDist, col = c("black", "red", "green"), xlim= c(0,5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour and Distance")
+legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", "1", "2"), fill = c('black', 'red', 'green'))
 ```
 
 
@@ -514,7 +545,9 @@ CoxSnell(cs_sample, status)
 
 
 # Trip duration by precipitation (controlling for distance)
-summary(survreg(Surv(trip_duration) ~ precipitation*distance_traveled, data = TaxiWeather), dist = "lognormal")
+summary(survreg(Surv(trip_duration) ~ precipitation + distance_traveled, data = TaxiWeather2), dist = "lognormal")
+
+
 ```
 
 ```{r}
@@ -531,6 +564,7 @@ summary(survreg(Surv(trip_duration) ~ precipitation*distance_traveled, data = Ta
 
 Make new categorical variable: fair weather, rain, snow
 ```{r}
+TaxiWeather <- read.csv("TaxiWeatherDISTANCE.csv")
 TaxiWeather <- TaxiWeather %>%
     mutate(weather = ifelse(snow.fall > 0, "snow", ifelse(precipitation > 0, "rain", "fair"))) 
 ```
@@ -539,6 +573,12 @@ Then make models (with and without controlling for distance)
 ```{r}
 weather = survreg(Surv(trip_duration) ~ weather, dist = "lognormal", data = TaxiWeather)
 summary(weather)
+
+weather1 = survreg(Surv(trip_duration) ~ weather + total_distance, dist = "lognormal", data = TaxiWeather)
+summary(weather1)
+
+weather2 = survreg(Surv(trip_duration) ~ weather * precipitation + total_distance, dist = "lognormal", data = TaxiWeather)
+summary(weather2)
 
 weather_dist_passenger = survreg(Surv(trip_duration) ~ weather+distance_traveled+factor(passenger_count), dist = "lognormal", data = TaxiWeather)
 summary(weather_dist_passenger)
@@ -551,6 +591,17 @@ curve(1-plnorm(x, mean=6.47528, sd=0.741), col = 'red', xlim = c(0, 2000), xlab 
 curve(1-plnorm(x, mean=6.47528+0.00368, sd=0.741), col = 'black', add=T)
 
 curve(1-plnorm(x, mean=6.47528-0.07395, sd=0.741), col = 'cyan', add=T)
+
+legend("topright", inset = 0.05, title = "Month", legend = c("fair", "rain", "snow"), fill = c('red', 'black', 'cyan'))
+```
+
+##### Survival curves by weather, controllilng for distance
+```{r}
+curve(1-plnorm(x, mean=6.03+ 9.39e-05 * mean(TaxiWeather$total_distance), sd=0.548), col = 'red', xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Weather Type controlling for Distance")
+
+curve(1-plnorm(x, mean=6.03+4.92e-03 + 9.39e-05 * mean(TaxiWeather$total_distance), sd=0.548), col = 'black', add=T)
+
+curve(1-plnorm(x, mean=6.03+-5.73e-02+ 9.39e-05 * mean(TaxiWeather$total_distance), sd=0.548), col = 'cyan', add=T)
 
 legend("topright", inset = 0.05, title = "Month", legend = c("fair", "rain", "snow"), fill = c('red', 'black', 'cyan'))
 ```
@@ -740,7 +791,7 @@ getBikeLaneTotal <- function() {
 
 
 ```{r}
-RoadsNameData = read.csv("RoadsNameData3.csv")
+RoadsNameData = read.csv("RoadsNameData.csv")
 StreetInfo = read.csv("nyc_centerline.csv")
 mini = head(RoadsNameData, 5)
 bikeStreetInfo = subset(StreetInfo, bike_lane > 0)
@@ -816,6 +867,9 @@ summary(pcount_weib_dist)
 pcount_weib_steps <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + number_of_steps, data = TaxiRoutes, dist = "weibull")
 summary(pcount_weib_steps)
 
+pcount_weib_steps_dur <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + number_of_steps + total_distance, data = TaxiRoutes, dist = "weibull")
+summary(pcount_weib_steps_dur)
+
 
 #Lognormal
 # Exponential
@@ -875,7 +929,22 @@ curve(1-pweibull(x, shape=1/0.526,scale=exp(6.1649-0.1611+0.0978*mean(TaxiRoutes
 legend("topright", inset = 0.05, title = "Passenger Count", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
 ```
 
+#### Passenger and distance and number of steps
+```{r}
+curve(1-pweibull(x, shape=1/0.479,scale=exp(6.15 + 3.09e-02*mean(TaxiRoutes$number_of_steps) + 7.13e-05*mean(TaxiRoutes$total_distance))), col = 'red', xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Passenger Count Controlling for Distance")
+#passenger 2
+curve(1-pweibull(x, shape=1/0.479,scale=exp(6.15 + 1.34e-02 + 3.09e-02*mean(TaxiRoutes$number_of_steps) + 7.13e-05*mean(TaxiRoutes$total_distance))), col = 'orange', add=T)
+#passenger 3
+curve(1-pweibull(x, shape=1/0.479,scale=exp(6.15 + 2.67e-02 + 3.09e-02*mean(TaxiRoutes$number_of_steps) + 7.13e-05*mean(TaxiRoutes$total_distance))), col = 'gold', add=T)
+#passeenger 4
+curve(1-pweibull(x, shape=1/0.479,scale=exp(6.15 + 3.27e-02  + 3.09e-02*mean(TaxiRoutes$number_of_steps) + 7.13e-05*mean(TaxiRoutes$total_distance))), col = 'green', add=T)
+#passenger 5
+curve(1-pweibull(x, shape=1/0.479,scale=exp(6.15 + 1.07e-03  + 3.09e-02*mean(TaxiRoutes$number_of_steps) + 7.13e-05*mean(TaxiRoutes$total_distance))), col = 'cyan', add=T)
+#passenger 6
+curve(1-pweibull(x, shape=1/0.479,scale=exp(6.15 + 9.95e-03 + 3.09e-02*mean(TaxiRoutes$number_of_steps) + 7.13e-05*mean(TaxiRoutes$total_distance))), col = 'purple', add=T)
 
+legend("topright", inset = 0.05, title = "Passenger Count", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
+```
 
 
 
