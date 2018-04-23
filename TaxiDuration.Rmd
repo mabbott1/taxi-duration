@@ -41,6 +41,16 @@ library(tmap)
 library(tidyr)
 #library(survminer)
 library(data.table)
+library(stargazer)
+
+
+# Cox Snell Residuals
+CoxSnell = function(cs,status,xlim=NULL,ylim=NULL)
+{
+kmcs=survfit(Surv(jitter(cs,amount=(max(cs)-min(cs))/1000),status)~1)$surv
+plot(log(-log(kmcs))~sort(log(cs)),xlab="log(Cox-Snell)",ylab="log(-log(S(Cox-Snell)))",xlim=xlim,ylim=ylim)
+abline(0,1,col='red')
+}
 ```
 
 ## Read in data:
@@ -112,13 +122,13 @@ cleanTaxi <- read_csv("cleanTaxi.csv")
 dim(cleanTaxi)
 
 # Restricts duration to under 7200 seconds (about 2 hours) and over 10 seconds
-cleanTaxi3 <- cleanTaxi %>%
-  filter(trip_duration > 10) %>%
-  filter(trip_duration < 7200)
+#cleanTaxi3 <- cleanTaxi %>%
+  #filter(trip_duration > 10) %>%
+  #filter(trip_duration < 7200)
 
 
 # save the cleaner version of the data
-write.csv(cleanTaxi3, file = "cleanTaxi.csv")
+#write.csv(cleanTaxi3, file = "cleanTaxi.csv")
 ```
 
 
@@ -129,6 +139,8 @@ write.csv(cleanTaxi3, file = "cleanTaxi.csv")
 cleanTaxi <- read.csv("cleanTaxi.csv") %>%
   filter(passenger_count > 0)
 ```
+
+
 
 ** Make a map of the clean data**
 ```{r}
@@ -153,7 +165,7 @@ ggplot(data = new_york_areas) + geom_polygon(aes(x = long, y = lat, fill = regio
 ## Plot trip duration with a Kaplan-Meier curve
 ```{r}
 KM_taxi <- survfit(Surv(trip_duration) ~ 1, data = cleanTaxi)
-plot(KM_taxi, col = 'purple', xlim = c(0, 23500), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration")
+plot(KM_taxi, col = 'purple', xlim = c(0, 7200), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration")
 ```
 
 
@@ -267,16 +279,108 @@ integrate(surv, 0, Inf)
 ```
 
 ### Month Multivariate Models
-```{r}
-# Weibull: controlling for distance 
-#month_weib = survreg(Surv(trip_duration) ~ as.factor(month) + total_distance, dist = "weibull", data = TaxiRoutes)
-#summary(month_weib)
 
-#Km models
-KM_month2 <- survfit(Surv(trip_duration) ~ as.factor(month) + total_distance, data = TaxiRoutes)
-#plot(KM_month, col = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'), xlim = c(0, 5000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Month")
-#legend("topright", inset = 0.05, title = "Month", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
+#### Parametric models and Comparisons
+```{r}
+#Exponential
+#month_exp = survreg(Surv(trip_duration) ~ as.factor(month) + total_distance, dist = "exponential", data = TaxiRoutes)
+#summary(month_exp)
+
+# Weibull:
+month_weib = survreg(Surv(trip_duration) ~ as.factor(month), dist = "weibull", data=TaxiRoutes)
+summary(month_weib)
+
+monthDist_weib = survreg(Surv(trip_duration) ~ as.factor(month) + total_distance, dist = "weibull", data = TaxiRoutes)
+summary(monthDist_weib)
+
+monthWea_weib = survreg(Surv(trip_duration) ~ as.factor(month) + weather, dist = "weibull", data = TaxiWeather)
+summary(monthWea_weib)
+
+#Lognormal:
+#month_lnorm = survreg(Surv(trip_duration) ~ as.factor(month) + total_distance, dist = "lognormal", data = TaxiRoutes)
+#summary(month_lnorm)
+
+#month_exp$loglik
+#month_weib$loglik
+#month_lnorm$loglik
 ```
+
+#### Survival curves by month (weibull)
+```{r}
+curve(1-pweibull(x, shape=1/0.7, scale=exp(6.77352)), col = 'red', xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Month")
+#curve(1-pweibull(x, shape=1/0.7, scale=exp(6.77352-0.00413)), col = 'orange', add=TRUE)
+#curve(1-pweibull(x, shape=1/0.7, scale=exp(6.77352+0.03262)), col = 'black', add=TRUE)
+curve(1-pweibull(x, shape=1/0.7, scale=exp(6.77352+0.07169)), col = 'green', add=TRUE)
+#curve(1-pweibull(x, shape=1/0.7, scale=exp(6.77352+0.11858)), col = 'cyan', add=TRUE)
+curve(1-pweibull(x, shape=1/0.7, scale=exp(6.77352+0.12541)), col = 'purple', add=TRUE)
+
+legend("topright", inset = 0.05, title = "Month", legend = c("1", "4", "6"), fill = c('red', 'green', 'purple'))
+```
+
+#### Survival curves of month and distance
+```{r}
+curve(1-pweibull(x, shape=1/0.479, scale=exp(6.23e+00 + (9.63e-05*mean(TaxiRoutes$total_distance)))), col = 'red', xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Month Controlling for Distance")
+#curve(1-pweibull(x, shape=1/0.479, scale=exp(6.23e+00+6.33e-03+ 9.63e-05*mean(TaxiRoutes$total_distance))), col = 'orange', add=TRUE)
+#curve(1-pweibull(x, shape=1/0.479, scale=exp(6.23e+00+2.01e-02 + 9.63e-05*mean(TaxiRoutes$total_distance))), col = 'black', add=TRUE)
+curve(1-pweibull(x, shape=1/0.479, scale=exp(6.23e+00+6.61e-02+ 9.63e-05*mean(TaxiRoutes$total_distance))), col = 'green', add=TRUE)
+#curve(1-pweibull(x, shape=1/0.479, scale=exp(6.23e+00+8.76e-02+ 9.63e-05*mean(TaxiRoutes$total_distance))), col = 'cyan', add=TRUE)
+curve(1-pweibull(x, shape=1/0.479, scale=exp(6.23e+00+9.94e-02+ 9.63e-05*mean(TaxiRoutes$total_distance))), col = 'purple', add=TRUE)
+
+legend("topright", inset = 0.05, title = "Month", legend = c("1", "4", "6"), fill = c('red', 'green', 'purple'))
+```
+
+#### survival curves of month and weather = fair
+```{r}
+curve(1-pweibull(x, shape=1/0.7, scale=exp(6.78315)), col = 'red', xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Month Controlling for Weather = fair")
+#curve(1-pweibull(x, shape=1/0.7, scale=exp(6.78315-0.00156)), col = 'orange', add=TRUE)
+#curve(1-pweibull(x, shape=1/0.7, scale=exp(6.78315+0.02822)), col = 'black', add=TRUE)
+curve(1-pweibull(x, shape=1/0.7, scale=exp(6.78315+0.06753)), col = 'green', add=TRUE)
+#curve(1-pweibull(x, shape=1/0.7, scale=exp(6.78315+0.11016)), col = 'cyan', add=TRUE)
+curve(1-pweibull(x, shape=1/0.7, scale=exp(6.78315+0.11675)), col = 'purple', add=TRUE)
+
+legend("topright", inset = 0.05, title = "Month", legend = c("1", "4", "6"), fill = c('red', 'green', 'purple'))
+```
+
+
+
+```{r}
+#LRT of Exponential and Weibull
+2*(-10399207--10873727)  #t-test
+1-pchisq(949040, df = 1)  #p-value
+
+#AIC test for Weibull and Lognormal
+2*7 - 2*-10873727 #exp
+2*8 - 2*-10399207 #weibull
+2*8 - 2*-10417985 #lognormal
+
+#Weibull appears to be the best model!!
+```
+
+
+
+#### Cox PH models and Testing adequacy
+```{r}
+#cph models
+cph_month = coxph(Surv(trip_duration) ~ as.factor(month), data=TaxiRoutes)
+summary(cph_month)
+cox.zph(cph_month)
+
+cph_month_dist = coxph(Surv(trip_duration) ~ as.factor(month) + total_distance, data=TaxiRoutes)
+summary(cph_month_dist)
+cox.zph(cph_month_dist)
+
+cph_month_weather = coxph(Surv(trip_duration) ~ as.factor(month) + weather, data=TaxiWeather)
+summary(cph_month_weather)
+cox.zph(cph_month_weather)
+
+
+#cloglog appears to be too close hard to tell?
+```
+
+```{r}
+plot(KM_month, fun='cloglog', xlim = c(10,50), ylim = c(-10,-6), col=c("red", "orange", "green", "blue", "purple", "black"))
+```
+
 
 
 ## Creating a Rush Hour variable 
@@ -362,13 +466,7 @@ Try modeling with exponential, weibull, and log normal distributions.  Use Cox S
 # Exponential
 mod_precip_exp <- survreg(Surv(trip_duration) ~ precipitation, data = TaxiWeather, dist = "exponential")
 summary(mod_precip_exp)
-# Cox Snell Residuals
-CoxSnell = function(cs,status,xlim=NULL,ylim=NULL)
-{
-kmcs=survfit(Surv(jitter(cs,amount=(max(cs)-min(cs))/1000),status)~1)$surv
-plot(log(-log(kmcs))~sort(log(cs)),xlab="log(Cox-Snell)",ylab="log(-log(S(Cox-Snell)))",xlim=xlim,ylim=ylim)
-abline(0,1,col='red')
-}
+
 # Plot only a sample of 1000 CS residuals
 cs = -log( 1 - pexp(TaxiWeather$trip_duration, 1/exp(6.7331 + -0.0394*TaxiWeather$precipitation)))
 # smaller sample of cs residuals
@@ -423,10 +521,23 @@ TaxiWeather <- TaxiWeather %>%
 
 Then make models (with and without controlling for distance)
 ```{r}
-summary(survreg(Surv(trip_duration) ~ weather, data = TaxiWeather), dist = "lognormal")
-summary(survreg(Surv(trip_duration) ~ weather+distance_traveled+factor(passenger_count), data = TaxiWeather), dist = "lognormal")
+weather = survreg(Surv(trip_duration) ~ weather, dist = "lognormal", data = TaxiWeather)
+summary(weather)
+
+weather_dist_passenger = survreg(Surv(trip_duration) ~ weather+distance_traveled+factor(passenger_count), dist = "lognormal", data = TaxiWeather)
+summary(weather_dist_passenger)
 ```
 
+##### Survival curves by weather
+```{r}
+curve(1-plnorm(x, mean=6.47528, sd=0.741), col = 'red', xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Weather Type")
+
+curve(1-plnorm(x, mean=6.47528+0.00368, sd=0.741), col = 'black', add=T)
+
+curve(1-plnorm(x, mean=6.47528-0.07395, sd=0.741), col = 'cyan', add=T)
+
+legend("topright", inset = 0.05, title = "Month", legend = c("fair", "rain", "snow"), fill = c('red', 'black', 'cyan'))
+```
 
 
 # Taxi Routes
@@ -436,12 +547,12 @@ summary(survreg(Surv(trip_duration) ~ weather+distance_traveled+factor(passenger
 Use shortest road routes between start and end.
 ```{r}
 # shorests routes for each taxi ride
-#Routes1 <- read.csv("fastest_routes_train_part_1.csv")
-#Routes2 <- read.csv("fastest_routes_train_part_2.csv")
+Routes1 <- read.csv("fastest_routes_train_part_1.csv")
+Routes2 <- read.csv("fastest_routes_train_part_2.csv")
 
 # join routes with taxi data
-#RoutesAll <- rbind(Routes1, Routes2)
-#TaxiRoutes <- merge(cleanTaxi, RoutesAll, by = "id")
+RoutesAll <- rbind(Routes1, Routes2)
+TaxiRoutes <- merge(cleanTaxi, RoutesAll, by = "id")
 ```
 
 Separating list of taxi route streets into columns
@@ -658,24 +769,74 @@ summary(ln_step_number3)
 #Trying different parametric models 
 
 # Exponential
-pcount_exp <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), data = TaxiRoutes, dist = "exponential")
-summary(pcount_exp)
+#pcount_exp <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + total_distance, data = TaxiRoutes, dist = "exponential")
+#summary(pcount_exp)
 
 # Weibull
-pcount_weib <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), data = TaxiRoutes, dist = "weibull")
-summary(pcount_weib)
+pcount_weib_dist <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + total_distance, data = TaxiRoutes, dist = "weibull")
+summary(pcount_weib_dist)
+
+pcount_weib_steps <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + number_of_steps, data = TaxiRoutes, dist = "weibull")
+summary(pcount_weib_steps)
+
 
 #Lognormal
 # Exponential
-pcount_lnorm <- survreg(Surv(trip_duration) ~ as.factor(passenger_count), data = TaxiRoutes, dist = "lognormal")
-summary(pcount_lnorm)
+#pcount_lnorm <- survreg(Surv(trip_duration) ~ as.factor(passenger_count) + total_distance, data = TaxiRoutes, dist = "lognormal")
 
+#summary(pcount_lnorm)
 
+#pcount_exp$loglik
+#pcount_weib$loglik
+#pcount_lnorm$loglik
+```
+
+```{r}
+#LRT for exponential and weibull
+2*(-10403739--10874473)
+1-pchisq(276644, df=1)
+#AIC for all
+2*6-2*-10874473 #exponential
+2*7-2*-10403739 #weibull
+2*7-2*-10419616 #lognormal
+
+#Weibull is the best model
+```
+
+#### Passenger and distance
+```{r}
+curve(1-pweibull(x, shape=1/0.481,scale=exp(6.28e+00-0.1738 +9.65e-05*mean(TaxiRoutes$total_distance))), col = 'red', xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Passenger Count Controlling for Distance")
+#passenger 2
+curve(1-pweibull(x, shape=1/0.481,scale=exp(6.28e+00+5.81e-03+9.65e-05*mean(TaxiRoutes$total_distance))), col = 'orange', add=T)
+#passenger 3
+curve(1-pweibull(x, shape=1/0.481,scale=exp(6.28e+00+1.82e-02+9.65e-05*mean(TaxiRoutes$total_distance))), col = 'gold', add=T)
+#passeenger 4
+curve(1-pweibull(x, shape=1/0.481,scale=exp(6.28e+00+2.52e-02+9.65e-05*mean(TaxiRoutes$total_distance))), col = 'green', add=T)
+#passenger 5
+curve(1-pweibull(x, shape=1/0.481,scale=exp(6.28e+00-7.74e-03+9.65e-05*mean(TaxiRoutes$total_distance))), col = 'cyan', add=T)
+#passenger 6
+curve(1-pweibull(x, shape=1/0.481,scale=exp(6.28e+00+0.00e+00+9.65e-05*mean(TaxiRoutes$total_distance))), col = 'purple', add=T)
+
+legend("topright", inset = 0.05, title = "Passenger Count", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
 ```
 
 
+#### Passenger and number of steps
+```{r}
+curve(1-pweibull(x, shape=1/0.526,scale=exp(6.1649-0.1738 +0.0978*mean(TaxiRoutes$number_of_steps))), col = 'red', xlim = c(0, 2000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Passenger Count Controlling for Number os Steps in Route")
+#passenger 2
+#curve(1-pweibull(x, shape=1/0.526,scale=exp(6.1649-0.1514+0.0978*mean(TaxiRoutes$number_of_steps))), col = 'orange', add=T)
+#passenger 3
+#curve(1-pweibull(x, shape=1/0.526,scale=exp(6.1649-0.1408+0.0978*mean(TaxiRoutes$number_of_steps))), col = 'gold', add=T)
+#passeenger 4
+curve(1-pweibull(x, shape=1/0.526,scale=exp(6.1649-0.1314+0.0978*mean(TaxiRoutes$number_of_steps))), col = 'green', add=T)
+#passenger 5
+#curve(1-pweibull(x, shape=1/0.526,scale=exp(6.1649-0.1690+0.0978*mean(TaxiRoutes$number_of_steps))), col = 'cyan', add=T)
+#passenger 6
+curve(1-pweibull(x, shape=1/0.526,scale=exp(6.1649-0.1611+0.0978*mean(TaxiRoutes$number_of_steps))), col = 'purple', add=T)
 
-
+legend("topright", inset = 0.05, title = "Passenger Count", legend = c("1", "2", "3", "4", "5", "6"), fill = c('red', 'orange', 'gold', 'green', 'cyan', 'purple'))
+```
 
 
 
