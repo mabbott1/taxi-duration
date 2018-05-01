@@ -478,12 +478,12 @@ cox.zph(coxRushDist)
 
 smallTaxi = head(cleanTaxi, 500)
 
-WeibRushDist = survreg(Surv(cleanTaxi$trip_duration)~as.factor(cleanTaxi$rush)+cleanTaxi$distance_traveled, dist = "weibull")
+WeibRushDist = survreg(Surv(TaxiWeather$trip_duration)~as.factor(TaxiWeather$rush)+TaxiWeather$total_distance, dist = "weibull")
 summary(WeibRushDist)
 
-curve(1-pweibull(x, shape = 1/0.483, scale = exp(6.2676+-0.0824 + 0.2100*mean(cleanTaxi$distance_traveled))), col = "red", xlim = c(0, 3000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour Controlling for Distance")
-curve(1-pweibull(x, shape = 1/0.483, scale = exp(6.2676+0.0989 + 0.2100*mean(cleanTaxi$distance_traveled))), add = T, col = "green")
-curve(1-pweibull(x, shape = 1/0.483, scale = exp(6.2676+ 0.2100*mean(cleanTaxi$distance_traveled))), add = T, col = "black")
+curve(1-pweibull(x, shape = 1/0.483, scale = exp(6.2676+-0.0824 + 0.2100*mean(TaxiWeather$distance_traveled))), col = "red", xlim = c(0, 3000), xlab = "Trip Duration (seconds)", ylab = "Survival Estimate", main = "Taxi Trip Duration by Rush Hour Controlling for Distance")
+curve(1-pweibull(x, shape = 1/0.483, scale = exp(6.2676+0.0989 + 0.2100*mean(TaxiWeather$distance_traveled))), add = T, col = "green")
+curve(1-pweibull(x, shape = 1/0.483, scale = exp(6.2676+ 0.2100*mean(TaxiWeather$distance_traveled))), add = T, col = "black")
 
 legend("topright", inset = 0.05, title = "Rush Hour Indicator", legend = c("0", "1", "2"), fill = c('black', 'red', 'green'))
 
